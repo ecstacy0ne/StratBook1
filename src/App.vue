@@ -1,149 +1,220 @@
 <template>
-  <div id="app">
-    <div class="container">
-      <header class="header">
-        <h1>🎯 CS2 STRATBOOK</h1>
-        <p>База стратегий для Counter-Strike 2</p>
+  <div id="app" :class="theme">
+    <aside class="sidebar">
+      <div class="sidebar-inner">
+        <div class="logo-section">
+          <div class="hex-logo">SB</div>
+          <div class="brand-info">
+            <span class="brand-name">STRATBOOK</span>
+            <span class="brand-tag">TACTICAL INTERFACE</span>
+          </div>
+        </div>
+        
+        <nav class="map-registry">
+          <div class="registry-header">
+            <span>SECTOR REGISTRY</span>
+            <button @click="view = 'settings'" class="btn-settings" title="Configuration">⚙️</button>
+          </div>
+          
+          <div class="map-list-area">
+            <MapButton 
+              v-for="m in maps" 
+              :key="m" 
+              :map="m" 
+              :is-active="activeMap === m" 
+              @select="changeMap" 
+            />
+          </div>
+        </nav>
+
+        <button :disabled="!activeMap || maps.length === 0" class="btn-deploy-trigger" @click="view = 'creator'">
+          DEPLOY STRATEGY
+        </button>
+      </div>
+    </aside>
+
+    <main class="viewport">
+      <header class="top-nav">
+        <div class="nav-left">
+          <div class="version-tag">SYSTEM v3.4 // READY</div>
+        </div>
+        
+        <div class="nav-right">
+          <button @click="toggleTheme" class="btn-toggle-hud">
+            {{ theme === 'dark' ? '☀️ LIGHT HUD' : '🌙 DARK HUD' }}
+          </button>
+          <div class="status-badge">
+            <span class="s-label">DATABASE UNITS:</span>
+            <span class="s-value">{{ filteredStrats.length }}</span>
+          </div>
+        </div>
       </header>
 
-      <MapSelector v-model="selectedMap" />
-
-      <StratForm @add-strat="addStrat" />
-
-      <div class="strats-list">
-        <h2>📋 Стратегии для {{ selectedMap }}</h2>
-        <div class="stats">📊 Всего: {{ filteredStrats.length }}</div>
-
-        <StratCard
-          v-for="strat in filteredStrats"
-          :key="strat.id"
-          :strat="strat"
-          @edit="(updatedData) => editStrat(strat.id, updatedData)"
-          @delete="deleteStrat(strat.id)"
-        />
-
-        <div v-if="filteredStrats.length === 0" class="empty-state">
-          <p>🎯 Нет стратегий для {{ selectedMap }}</p>
-          <p>Добавьте первую стратегию!</p>
+      <section v-if="view === 'library'" class="main-view">
+        <div class="content-header">
+          <h2 class="active-sector-title">{{ activeMap || 'OFFLINE' }}</h2>
+          
+          <div class="filter-panel" v-if="activeMap && maps.length > 0">
+            <div class="filter-group">
+              <button v-for="s in ['all', 't', 'ct']" :key="s" 
+                @click="fSide = s" :class="['f-pill', s, { active: fSide === s }]">
+                {{ s.toUpperCase() }}
+              </button>
+            </div>
+            <div class="filter-group">
+              <button v-for="site in ['all', 'A', 'B', 'Mid']" :key="site" 
+                @click="fSite = site" :class="['f-pill', { active: fSite === site }]">
+                {{ site === 'all' ? 'ANY SITE' : site }}
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+
+        <div v-if="filteredStrats.length === 0" class="empty-state-hud">
+          <div class="hud-circle-icon">
+            <div class="inner-pulse"></div>
+            <span class="icon-char">!</span>
+          </div>
+          <h3>TACTICAL DATA STREAM: NULL</h3>
+          <p>Sector {{ activeMap }} has no registered tactical deployments. Initialize manual entry.</p>
+          <button v-if="activeMap" @click="view = 'creator'" class="btn-init-strat">
+            INITIATE DEPLOYMENT
+          </button>
+        </div>
+        
+        <div v-else class="tactical-grid">
+          <StratCard 
+            v-for="item in filteredStrats" 
+            :key="item.id" 
+            :strat="item" 
+            @delete="deleteStrat(item.id)" 
+          />
+        </div>
+      </section>
+
+      <section v-if="view === 'settings'" class="main-view">
+        <div class="content-header">
+          <h2>MAP REGISTRY CONFIGURATION</h2>
+          <button @click="view = 'library'" class="btn-exit-settings">EXIT TO HUD</button>
+        </div>
+        
+        <div class="settings-container">
+          <div class="settings-box add-sector">
+            <span class="box-label">REGISTER NEW SECTOR</span>
+            <div class="hud-input-group">
+              <input v-model="newMapInput" @keyup.enter="addMap" placeholder="DESIGNATION..." class="hud-input-main">
+              <button @click="addMap" class="btn-hud-confirm">ADD</button>
+            </div>
+          </div>
+
+          <div class="settings-box registry-list-box">
+            <span class="box-label">ACTIVE POOL REGISTRY</span>
+            <div class="registry-scroller">
+              <div v-for="m in maps" :key="m" class="registry-entry">
+                <span class="entry-name">{{ m }}</span>
+                <button @click="removeMap(m)" class="btn-entry-remove">TERMINATE</button>
+              </div>
+            </div>
+            <button @click="resetToDefault" class="btn-hud-reset">RESTORE OFFICIAL ACTIVE DUTY</button>
+          </div>
+        </div>
+      </section>
+
+      <StratForm 
+        v-if="view === 'creator'" 
+        :active-map="activeMap" 
+        @submit="saveStrat" 
+        @close="view = 'library'" 
+      />
+    </main>
   </div>
 </template>
 
 <script>
-import MapSelector from './components/MapSelector.vue'
-import StratForm from './components/StratForm.vue'
 import StratCard from './components/StratCard.vue'
+import StratForm from './components/StratForm.vue'
+import MapButton from './components/MapButton.vue'
 
-const STORAGE_KEY = 'cs2-stratbook'
+const MAPS_KEY = 'cs_tactical_maps';
+const DATA_KEY = 'cs_tactical_data';
+const THEME_KEY = 'cs_tactical_theme';
+const DEFAULT_MAPS = ['Mirage', 'Dust2', 'Inferno', 'Nuke', 'Anubis', 'Ancient', 'Overpass'];
 
 export default {
-  name: 'App',
-  components: { MapSelector, StratForm, StratCard },
+  components: { StratCard, StratForm, MapButton },
   data() {
+    const savedMaps = JSON.parse(localStorage.getItem(MAPS_KEY)) || DEFAULT_MAPS;
     return {
-      selectedMap: 'Mirage',
-      strats: []
+      view: 'library',
+      theme: localStorage.getItem(THEME_KEY) || 'dark',
+      maps: savedMaps,
+      activeMap: savedMaps[0] || '',
+      strats: JSON.parse(localStorage.getItem(DATA_KEY)) || [],
+      fSide: 'all',
+      fSite: 'all',
+      newMapInput: ''
     }
   },
   computed: {
     filteredStrats() {
-      return this.strats.filter(strat => strat.map === this.selectedMap)
+      return this.strats.filter(s => {
+        const matchMap = s.map === this.activeMap;
+        const matchSide = this.fSide === 'all' || s.side === this.fSide;
+        const matchSite = this.fSite === 'all' || (s.site || 'Any') === this.fSite;
+        return matchMap && matchSide && matchSite;
+      });
     }
   },
-  mounted() {
-    this.loadStrats()
+  watch: {
+    theme: {
+      immediate: true,
+      handler(val) {
+        document.body.style.backgroundColor = val === 'dark' ? '#080a0f' : '#f1f3f6';
+      }
+    }
   },
   methods: {
-    addStrat(newStrat) {
-      const strat = {
-        id: crypto.randomUUID(),
-        name: newStrat.name.trim(),
-        description: newStrat.description.trim(),
-        roundType: newStrat.roundType || 'full',
-        map: this.selectedMap,
-        date: new Date().toISOString()
-      }
-
-      this.strats.unshift(strat)
-      this.saveStrats()
+    toggleTheme() {
+      this.theme = this.theme === 'dark' ? 'light' : 'dark';
+      localStorage.setItem(THEME_KEY, this.theme);
     },
-
+    changeMap(m) { this.activeMap = m; this.view = 'library'; },
+    addMap() {
+      const n = this.newMapInput.trim().toUpperCase();
+      if (n && !this.maps.includes(n)) {
+        this.maps.push(n);
+        this.persist();
+        this.newMapInput = '';
+      }
+    },
+    removeMap(m) {
+      if (this.maps.length > 1 && confirm(`SYSTEM: TERMINATE SECTOR ${m}?`)) {
+        this.maps = this.maps.filter(x => x !== m);
+        if (this.activeMap === m) this.activeMap = this.maps[0];
+        this.persist();
+      }
+    },
+    resetToDefault() {
+      if (confirm('RE-INITIALIZE OFFICIAL POOL?')) {
+        this.maps = [...DEFAULT_MAPS];
+        this.activeMap = this.maps[0];
+        this.persist();
+      }
+    },
+    saveStrat(p) {
+      this.strats.push({ id: Date.now(), date: new Date().toISOString(), map: this.activeMap, ...p });
+      this.persist();
+      this.view = 'library';
+    },
     deleteStrat(id) {
-      if (confirm('Удалить стратегию?')) {
-        this.strats = this.strats.filter(s => s.id !== id)
-        this.saveStrats()
+      if (confirm('SYSTEM: DELETE STRAT?')) {
+        this.strats = this.strats.filter(s => s.id !== id);
+        this.persist();
       }
     },
-
-    editStrat(id, updatedData) {
-      this.strats = this.strats.map(strat =>
-        strat.id === id
-          ? {
-              ...strat,
-              name: updatedData.name.trim(),
-              description: updatedData.description.trim(),
-              roundType: updatedData.roundType
-            }
-          : strat
-      )
-      this.saveStrats()
-    },
-
-    saveStrats() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.strats))
-    },
-
-    loadStrats() {
-      const saved = localStorage.getItem(STORAGE_KEY)
-
-      if (saved) {
-        try {
-          this.strats = JSON.parse(saved)
-        } catch (error) {
-          this.strats = []
-          localStorage.removeItem(STORAGE_KEY)
-        }
-        return
-      }
-
-      this.strats = [
-        {
-          id: crypto.randomUUID(),
-          name: 'Дефолт на A',
-          description: 'Стандартный выход на A. Два игрока контролят пространство, AWP смотрит мид. Смоки на сайт и на ключевые позиции.',
-          roundType: 'full',
-          map: 'Mirage',
-          date: new Date(Date.now() - 86400000).toISOString()
-        },
-        {
-          id: crypto.randomUUID(),
-          name: 'Пистолетный раш B',
-          description: 'Быстрый выход на B с плотным разменом. Один игрок идёт первым, остальные страхуют и занимают плент.',
-          roundType: 'pistol',
-          map: 'Dust2',
-          date: new Date(Date.now() - 172800000).toISOString()
-        },
-        {
-          id: crypto.randomUUID(),
-          name: 'Форс бай через аппартаменты',
-          description: 'Покупаем форс-раунд и идём через аппартаменты на A. Один игрок остаётся в миду для информации и позднего выхода.',
-          roundType: 'force',
-          map: 'Mirage',
-          date: new Date(Date.now() - 259200000).toISOString()
-        },
-        {
-          id: crypto.randomUUID(),
-          name: 'Эко лурк B',
-          description: 'Технический эко. Один игрок собирает информацию и пробует найти килл, остальные играют от тайминга и сохранения экономики.',
-          roundType: 'eco',
-          map: 'Dust2',
-          date: new Date(Date.now() - 345600000).toISOString()
-        }
-      ]
-
-      this.saveStrats()
+    persist() {
+      localStorage.setItem(MAPS_KEY, JSON.stringify(this.maps));
+      localStorage.setItem(DATA_KEY, JSON.stringify(this.strats));
     }
   }
 }
@@ -156,108 +227,701 @@ export default {
   box-sizing: border-box;
 }
 
-:root {
-  --bg: #0f1115;
-  --panel: #151923;
-  --panel-2: #1b2130;
-  --text: #e8edf7;
-  --muted: #9aa6bf;
-  --line: rgba(255, 255, 255, 0.08);
-  --accent: #6d7cff;
-  --accent-2: #8a5cff;
-  --success: #31c48d;
-  --warning: #f59e0b;
-  --danger: #ef4444;
-}
-
-body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background:
-    radial-gradient(circle at top, rgba(109, 124, 255, 0.18), transparent 35%),
-    radial-gradient(circle at bottom right, rgba(138, 92, 255, 0.14), transparent 30%),
-    linear-gradient(135deg, #0b0e14 0%, #111827 55%, #0b0e14 100%);
-  color: var(--text);
-  min-height: 100vh;
+body, html {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 
 #app {
-  min-height: 100vh;
-  padding: 24px;
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  background: rgba(21, 25, 35, 0.92);
-  border: 1px solid var(--line);
-  border-radius: 24px;
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
-  overflow: hidden;
-  backdrop-filter: blur(10px);
+#app.dark {
+  --bg: #080a0f;
+  --surface: #11141b;
+  --panel: rgba(255, 255, 255, 0.03);
+  --border: rgba(255, 255, 255, 0.08);
+  --text: #e2e8f0;
+  --muted: #64748b;
+  --accent: #00d1ff;
+  --input: #000000;
+  --overlay: rgba(0, 0, 0, 0.85);
+  background: #080a0f;
+  color: #e2e8f0;
 }
 
-.header {
-  background:
-    linear-gradient(135deg, rgba(31, 41, 55, 0.95), rgba(17, 24, 39, 0.95));
-  color: var(--text);
-  padding: 36px 28px;
-  text-align: center;
-  border-bottom: 1px solid var(--line);
+#app.light {
+  --bg: #f1f3f6;
+  --surface: #ffffff;
+  --panel: #e2e8f0;
+  --border: rgba(0, 0, 0, 0.1);
+  --text: #1e293b;
+  --muted: #475569;
+  --accent: #0066ff;
+  --input: #f8fafc;
+  --overlay: rgba(30, 41, 59, 0.5);
+  background: #f1f3f6;
+  color: #1e293b;
 }
 
-.header h1 {
-  font-size: clamp(2rem, 4vw, 3rem);
-  margin-bottom: 10px;
-  letter-spacing: 0.5px;
+:root {
+  --t-color: #ffa000;
+  --ct-color: #00a2ff;
 }
 
-.header p {
-  font-size: 1.05rem;
+.sidebar {
+  width: 300px;
+  height: 100%;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 40px 25px;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.sidebar-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.logo-section {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 50px;
+}
+
+.hex-logo {
+  width: 44px;
+  height: 44px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 18px;
+  box-shadow: 0 0 20px rgba(0, 209, 255, 0.2);
+}
+
+.brand-name {
+  display: block;
+  font-weight: 900;
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+
+.brand-tag {
+  display: block;
+  font-size: 9px;
+  font-weight: 800;
   color: var(--muted);
 }
 
-.strats-list {
-  padding: 24px;
+.map-registry {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-.strats-list h2 {
-  color: var(--text);
-  margin-bottom: 10px;
-  font-size: 1.35rem;
-}
-
-.stats {
+.registry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 900;
   color: var(--muted);
   margin-bottom: 20px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--line);
+  letter-spacing: 1px;
 }
 
-.empty-state {
-  text-align: center;
-  padding: 72px 20px;
+.btn-settings {
+  background: none;
+  border: none;
+  cursor: pointer;
   color: var(--muted);
-  border: 1px dashed var(--line);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.02);
+  font-size: 16px;
+  transition: 0.3s;
 }
 
-.empty-state p {
-  margin: 10px 0;
-  font-size: 1rem;
+.btn-settings:hover {
+  color: var(--accent);
+  transform: rotate(90deg);
+}
+
+.btn-favorites-nav {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.btn-favorites-nav:hover {
+  background: rgba(255, 215, 0, 0.1);
+  border-color: rgba(255, 215, 0, 0.3);
+}
+
+.btn-favorites-nav.active {
+  background: rgba(255, 215, 0, 0.15);
+  border-color: #ffd700;
+  color: #ffd700;
+}
+
+.fav-icon {
+  font-size: 18px;
+  margin-right: 12px;
+}
+
+.fav-label {
+  flex: 1;
+  letter-spacing: 1px;
+}
+
+.fav-count {
+  background: #ffd700;
+  color: #000;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 900;
+  min-width: 24px;
+  text-align: center;
+}
+
+.map-list-area {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 5px;
+}
+
+.map-list-area::-webkit-scrollbar {
+  width: 4px;
+}
+
+.map-list-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.map-list-area::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+.btn-deploy-trigger {
+  width: 100%;
+  padding: 18px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: 0.2s;
+  margin-top: 20px;
+  box-shadow: 0 4px 15px rgba(0, 209, 255, 0.2);
+}
+
+.btn-deploy-trigger:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
+
+.btn-deploy-trigger:disabled {
+  opacity: 0.15;
+  cursor: not-allowed;
+  filter: grayscale(1);
+}
+
+.viewport {
+  flex: 1;
+  height: 100%;
+  overflow-y: auto;
+  padding: 40px 50px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.viewport::-webkit-scrollbar {
+  width: 6px;
+}
+
+.viewport::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.viewport::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+.top-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 50px;
+  flex-shrink: 0;
+}
+
+.version-tag {
+  font-size: 10px;
+  font-weight: 900;
+  color: var(--muted);
+  background: var(--panel);
+  padding: 6px 12px;
+  border-radius: 6px;
+  letter-spacing: 1px;
+}
+
+.nav-right {
+  display: flex;
+  gap: 30px;
+  align-items: center;
+}
+
+.btn-toggle-hud {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 10px 20px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+  transition: all 0.2s ease;
+}
+
+.btn-toggle-hud:hover {
+  border-color: var(--accent);
+  background: var(--surface);
+}
+
+.status-badge {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 10px 20px;
+  border-radius: 10px;
+  text-align: right;
+}
+
+.s-label {
+  display: block;
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+
+.s-value {
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--accent);
+}
+
+.main-view {
+  flex: 1;
+}
+
+.content-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 40px;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.active-sector-title {
+  font-size: 42px;
+  font-weight: 900;
+  letter-spacing: -2px;
+  text-transform: uppercase;
+}
+
+.filter-panel {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: flex;
+  background: var(--panel);
+  padding: 4px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.f-pill {
+  background: none;
+  border: none;
+  color: var(--muted);
+  padding: 8px 18px;
+  border-radius: 9px;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 900;
+  transition: all 0.2s ease;
+}
+
+.f-pill:hover:not(.active) {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.f-pill.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.tactical-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 30px;
+  padding-bottom: 60px;
+}
+
+.empty-state-hud {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120px 40px;
+  border: 2px dashed var(--border);
+  border-radius: 30px;
+  text-align: center;
+  background: var(--panel);
+  margin-top: 20px;
+}
+
+.hud-circle-icon {
+  position: relative;
+  width: 90px;
+  height: 90px;
+  border: 3px solid var(--accent);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 30px;
+}
+
+.inner-pulse {
+  position: absolute;
+  inset: -10px;
+  border: 1px solid var(--accent);
+  border-radius: 50%;
+  opacity: 0.3;
+  animation: hud-pulse 2s infinite ease-out;
+}
+
+.icon-char {
+  font-size: 40px;
+  font-weight: 900;
+  color: var(--accent);
+}
+
+.empty-state-hud h3 {
+  font-size: 24px;
+  font-weight: 900;
+  margin-bottom: 12px;
+  letter-spacing: 1px;
+}
+
+.empty-state-hud p {
+  color: var(--muted);
+  font-size: 15px;
+  max-width: 400px;
+  line-height: 1.6;
+  margin-bottom: 35px;
+}
+
+.btn-init-strat {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 16px 32px;
+  border-radius: 12px;
+  font-weight: 900;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-init-strat:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 209, 255, 0.3);
+}
+
+.settings-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  margin-top: 20px;
+}
+
+.settings-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 40px;
+  border-radius: 24px;
+}
+
+.box-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--accent);
+  margin-bottom: 25px;
+  letter-spacing: 1px;
+}
+
+.hud-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.hud-input-main {
+  background: var(--input);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 16px;
+  border-radius: 12px;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.hud-input-main:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(0, 209, 255, 0.1);
+}
+
+.hud-input-main::placeholder {
+  color: var(--muted);
+  opacity: 0.5;
+}
+
+.btn-hud-confirm {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 16px;
+  border-radius: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-hud-confirm:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.registry-scroller {
+  max-height: 350px;
+  overflow-y: auto;
+  margin-bottom: 25px;
+  padding-right: 10px;
+}
+
+.registry-scroller::-webkit-scrollbar {
+  width: 4px;
+}
+
+.registry-scroller::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.registry-scroller::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+.registry-entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: var(--panel);
+  border-radius: 14px;
+  margin-bottom: 10px;
+  border: 1px solid var(--border);
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: 14px;
+  transition: background 0.2s ease;
+}
+
+.registry-entry:hover {
+  background: var(--surface);
+}
+
+.entry-name {
+  flex: 1;
+  margin-right: 15px;
+}
+
+.btn-entry-remove {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-entry-remove:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.btn-hud-reset {
+  width: 100%;
+  padding: 15px;
+  background: none;
+  border: 1px dashed var(--muted);
+  color: var(--muted);
+  border-radius: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s ease;
+}
+
+.btn-hud-reset:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(0, 209, 255, 0.05);
+}
+
+.btn-exit-settings {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 12px 25px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 12px;
+  transition: all 0.2s ease;
+}
+
+.btn-exit-settings:hover {
+  background: var(--surface);
+  border-color: var(--accent);
+}
+
+.empty-registry {
+  text-align: center;
+  color: var(--muted);
+  padding: 40px 20px;
+  font-size: 14px;
+}
+
+.toast-notification {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  color: var(--text);
+  padding: 16px 24px;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 14px;
+  z-index: 2000;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes hud-pulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+@media (max-width: 1200px) {
+  .sidebar {
+    display: none;
+  }
+  
+  .viewport {
+    padding: 25px;
+  }
+  
+  .active-sector-title {
+    font-size: 32px;
+  }
+  
+  .settings-container {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
 }
 
 @media (max-width: 768px) {
-  #app {
-    padding: 12px;
+  .viewport {
+    padding: 20px;
   }
-
-  .header {
-    padding: 24px 18px;
+  
+  .content-header {
+    flex-direction: column;
+    align-items: flex-start;
   }
-
-  .strats-list {
-    padding: 16px;
+  
+  .top-nav {
+    flex-direction: column;
+    gap: 15px;
+    align-items: flex-start;
+  }
+  
+  .tactical-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .nav-right {
+    width: 100%;
+    justify-content: space-between;
   }
 }
 </style>

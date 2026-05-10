@@ -1,71 +1,52 @@
 <template>
-  <div class="strat-card" :class="roundTypeClass">
-    <div class="strat-header">
-      <h3>{{ strat.name }}</h3>
-      <span class="strat-date">{{ formatDate(strat.date) }}</span>
-    </div>
-
-    <div class="round-badge" :class="roundTypeClass">
-      <span class="round-icon">{{ roundIcon }}</span>
-      <span class="round-text">{{ roundText }}</span>
-    </div>
-
-    <p class="strat-description">{{ strat.description }}</p>
-
-    <div class="strat-footer">
-      <div class="strat-actions">
-        <button type="button" @click="openEditModal" class="btn-edit" title="Редактировать">✏️</button>
-        <button type="button" @click="$emit('delete')" class="btn-delete" title="Удалить">🗑️</button>
-      </div>
-    </div>
-
-    <div v-if="showModal" class="modal" @click.self="closeModal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>Редактировать стратегию</h3>
-          <button type="button" @click="closeModal" class="modal-close">✕</button>
+  <div class="strat-card" :class="strat.side">
+    <div class="card-inner">
+      <header class="card-header">
+        <div class="site-tag" :class="getSiteClass(strat.site)">
+          {{ strat.site || '?' }}
         </div>
-
-        <form class="modal-body" @submit.prevent="saveChanges">
-          <label>Название:</label>
-          <input v-model="editName" class="edit-input" placeholder="Название стратегии" maxlength="60">
-
-          <label>Описание:</label>
-          <textarea
-            v-model="editDescription"
-            rows="4"
-            class="edit-input"
-            placeholder="Описание стратегии"
-            maxlength="300"
-          ></textarea>
-
-          <label>Тип раунда:</label>
-          <div class="modal-round-options">
-            <label :class="{ active: editRoundType === 'pistol' }">
-              <input type="radio" value="pistol" v-model="editRoundType"> 🔫 Пистолетный
-            </label>
-
-            <label :class="{ active: editRoundType === 'full' }">
-              <input type="radio" value="full" v-model="editRoundType"> 💰 Фулл бай
-            </label>
-
-            <label :class="{ active: editRoundType === 'force' }">
-              <input type="radio" value="force" v-model="editRoundType"> ⚡ Форс бай
-            </label>
-
-            <label :class="{ active: editRoundType === 'eco' }">
-              <input type="radio" value="eco" v-model="editRoundType"> 🐭 Эко
-            </label>
+        <div class="util-display" v-if="hasUtility">
+          <div v-if="strat.utility.smokes > 0" class="u-unit">
+            <span class="u-icon">☁️</span> 
+            <span class="u-count">{{ strat.utility.smokes }}</span>
           </div>
-
-          <p v-if="errorMessage" class="modal-error">{{ errorMessage }}</p>
-
-          <div class="modal-footer">
-            <button type="button" @click="closeModal" class="btn-cancel">Отмена</button>
-            <button type="submit" class="btn-save">Сохранить</button>
+          <div v-if="strat.utility.mollys > 0" class="u-unit">
+            <span class="u-icon">🔥</span> 
+            <span class="u-count">{{ strat.utility.mollys }}</span>
           </div>
-        </form>
+          <div v-if="strat.utility.flashes > 0" class="u-unit">
+            <span class="u-icon">✨</span> 
+            <span class="u-count">{{ strat.utility.flashes }}</span>
+          </div>
+        </div>
+      </header>
+      
+      <div class="card-content">
+        <div class="side-id">
+          {{ strat.side === 't' ? 'TERRORIST UNIT' : 'COUNTER-TERRORIST UNIT' }}
+        </div>
+        <h3 class="strat-name">{{ strat.name || 'UNNAMED STRATEGY' }}</h3>
+        <p class="strat-description">
+          {{ strat.description || 'No tactical data recorded' }}
+        </p>
+        
+        <a 
+          v-if="strat.videoUrl" 
+          :href="sanitizedVideoUrl" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          class="btn-watch"
+        >
+          ANALYZE DATA STREAM
+        </a>
       </div>
+
+      <footer class="card-footer">
+        <span class="entry-date">{{ formattedDate }}</span>
+        <button @click="handleDelete" class="btn-trash-icon" title="Delete strategy">
+          🗑️
+        </button>
+      </footer>
     </div>
   </div>
 </template>
@@ -73,321 +54,241 @@
 <script>
 export default {
   name: 'StratCard',
-  props: {
-    strat: {
-      type: Object,
-      required: true
+  
+  props: { 
+    strat: { 
+      type: Object, 
+      required: true 
     }
   },
-  data() {
-    return {
-      showModal: false,
-      editName: '',
-      editDescription: '',
-      editRoundType: 'full',
-      errorMessage: ''
-    }
-  },
+  
+  emits: ['delete'],
+  
   computed: {
-    roundTypeClass() {
-      const types = {
-        pistol: 'round-pistol',
-        full: 'round-full',
-        force: 'round-force',
-        eco: 'round-eco'
+    sanitizedVideoUrl() {
+      const url = this.strat.videoUrl;
+      if (!url) return '#';
+      
+      try {
+        new URL(url);
+        return url;
+      } catch {
+        if (url.includes('.') && !url.includes(' ')) {
+          return `https://${url}`;
+        }
+        return '#';
       }
-      return types[this.strat.roundType] || 'round-full'
     },
-    roundIcon() {
-      const icons = {
-        pistol: '🔫',
-        full: '💰',
-        force: '⚡',
-        eco: '🐭'
+    
+    formattedDate() {
+      if (!this.strat.date) return 'No date';
+      
+      try {
+        const date = new Date(this.strat.date);
+        if (isNaN(date.getTime())) return 'Invalid date';
+        
+        return date.toLocaleDateString('ru-RU', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        });
+      } catch {
+        return 'Invalid date';
       }
-      return icons[this.strat.roundType] || '💰'
     },
-    roundText() {
-      const texts = {
-        pistol: 'Пистолетный раунд',
-        full: 'Фулл бай',
-        force: 'Форс бай',
-        eco: 'Эко раунд'
-      }
-      return texts[this.strat.roundType] || 'Фулл бай'
+    
+    hasUtility() {
+      if (!this.strat.utility) return false;
+      const { smokes, mollys, flashes } = this.strat.utility;
+      return (smokes > 0) || (mollys > 0) || (flashes > 0);
     }
   },
+  
   methods: {
-    openEditModal() {
-      this.editName = this.strat.name
-      this.editDescription = this.strat.description
-      this.editRoundType = this.strat.roundType || 'full'
-      this.errorMessage = ''
-      this.showModal = true
+    getSiteClass(site) {
+      if (!site) return '';
+      const s = site.toLowerCase();
+      if (['a', 'b', 'mid', 'any'].includes(s)) return s;
+      return '';
     },
-
-    closeModal() {
-      this.showModal = false
-      this.errorMessage = ''
-    },
-
-    saveChanges() {
-      const name = this.editName.trim()
-      const description = this.editDescription.trim()
-
-      if (!name || !description) {
-        this.errorMessage = 'Заполните все поля!'
-        return
+    
+    handleDelete() {
+      if (confirm('Delete this strategy?')) {
+        this.$emit('delete');
       }
-
-      this.$emit('edit', {
-        name,
-        description,
-        roundType: this.editRoundType
-      })
-
-      this.closeModal()
-    },
-
-    formatDate(dateString) {
-      if (!dateString) return 'Без даты'
-      const date = new Date(dateString)
-      if (Number.isNaN(date.getTime())) return 'Некорректная дата'
-      return date.toLocaleDateString('ru-RU')
     }
   }
 }
 </script>
 
 <style scoped>
-.modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.85); /* Тёмный overlay без blur */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-  padding: 24px;
+.strat-card { 
+  background: var(--surface); 
+  border: 1px solid var(--border); 
+  border-radius: 24px; 
+  transition: all 0.3s ease; 
+  position: relative; 
+  overflow: hidden; 
 }
 
-.modal-content {
-  background: var(--panel-2); /* Чёткий тёмно-серый фон */
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  width: 100%;
-  max-width: 520px;
-  max-height: 90vh;
-  overflow: hidden;
-  box-shadow: 
-    0 24px 70px rgba(0, 0, 0, 0.6),
-    0 0 0 1px rgba(255, 255, 255, 0.05); /* Двойная тень для объёма */
-  animation: fadeInScale 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+.strat-card:hover { 
+  border-color: var(--accent); 
+  transform: translateY(-6px); 
+  box-shadow: 0 15px 35px rgba(0,0,0,0.25); 
 }
 
-@keyframes fadeInScale {
-  from { 
-    opacity: 0; 
-    transform: scale(0.95) translateY(-20px); 
-  }
-  to { 
-    opacity: 1; 
-    transform: scale(1) translateY(0); 
-  }
-}
-
-.modal-header {
-  background: rgba(17, 24, 39, 0.95); /* Более тёмный градиент */
-  color: var(--text);
-  padding: 20px 24px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid var(--line);
-}
-
-.modal-header h3 {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 700;
-}
-
-.modal-close {
+.strat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
   background: transparent;
-  border: none;
-  color: var(--muted);
-  font-size: 24px;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
 }
 
-.modal-close:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--text);
-  transform: rotate(90deg) scale(1.05);
+.strat-card.t::before { background: var(--t-color); }
+.strat-card.ct::before { background: var(--ct-color); }
+
+.card-inner { 
+  padding: 25px; 
+  display: flex; 
+  flex-direction: column; 
+  min-height: 280px; 
 }
 
-.modal-close:focus {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+.card-header { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  margin-bottom: 25px; 
 }
 
-.modal-body {
-  padding: 24px;
-  max-height: 400px;
-  overflow-y: auto;
+.site-tag { 
+  width: 36px; 
+  height: 36px; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  border-radius: 10px; 
+  font-weight: 900; 
+  font-size: 14px; 
+  background: var(--panel); 
+  color: var(--text); 
+  border: 1px solid var(--border); 
+  text-transform: uppercase;
 }
 
-.modal-body label {
-  display: block;
-  font-weight: 700;
-  margin-top: 18px;
-  margin-bottom: 8px;
-  color: var(--text);
-  font-size: 0.95rem;
+.site-tag.a { background: #ef4444; color: #fff; border: none; box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
+.site-tag.b { background: #3b82f6; color: #fff; border: none; box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }
+.site-tag.mid { background: #a855f7; color: #fff; border: none; box-shadow: 0 0 15px rgba(168, 85, 247, 0.4); }
+.site-tag.any { background: #10b981; color: #fff; border: none; box-shadow: 0 0 15px rgba(16, 185, 129, 0.4); }
+
+.util-display { display: flex; gap: 12px; font-size: 13px; font-weight: 900; color: var(--muted); }
+.u-unit { 
+  display: flex; 
+  align-items: center; 
+  gap: 6px;
+  background: var(--panel);
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
 }
 
-.modal-body label:first-child {
-  margin-top: 0;
+.card-content { flex: 1; }
+
+.side-id { 
+  font-size: 9px; 
+  font-weight: 900; 
+  letter-spacing: 1.2px; 
+  margin-bottom: 12px;
+  padding: 4px 10px;
+  display: inline-block;
+  border-radius: 6px;
 }
 
-.edit-input {
-  width: 100%;
-  padding: 14px 16px;
-  border: 2px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.02);
-  color: var(--text);
-  font-family: inherit;
-  font-size: 15px;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+.t .side-id { color: var(--t-color); background: rgba(255, 160, 0, 0.1); border: 1px solid rgba(255, 160, 0, 0.2); }
+.ct .side-id { color: var(--ct-color); background: rgba(0, 162, 255, 0.1); border: 1px solid rgba(0, 162, 255, 0.2); }
+
+.strat-name { 
+  font-size: 20px; 
+  font-weight: 900; 
+  margin-bottom: 10px; 
+  color: var(--text); 
+  line-height: 1.2;
+  word-break: break-word;
 }
 
-.edit-input::placeholder {
-  color: var(--muted);
+.strat-description { 
+  font-size: 14px; 
+  color: var(--muted); 
+  line-height: 1.6; 
+  max-height: 4.8em; 
+  overflow: hidden; 
+  display: -webkit-box; 
+  -webkit-line-clamp: 3; 
+  -webkit-box-orient: vertical;
+  word-break: break-word;
 }
 
-.edit-input:focus {
-  outline: none;
-  border-color: var(--accent);
-  background: rgba(255, 255, 255, 0.05);
-  box-shadow: 
-    0 0 0 4px rgba(109, 124, 255, 0.15),
-    0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.modal-round-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 8px;
-}
-
-.modal-round-options label {
-  display: flex;
+.btn-watch { 
+  display: inline-flex; 
   align-items: center;
   gap: 8px;
-  cursor: pointer;
-  padding: 12px 18px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 12px;
-  color: var(--text);
-  font-weight: 500;
-  font-size: 14px;
-  transition: all 0.2s ease;
-  white-space: nowrap;
+  margin-top: 20px; 
+  padding: 12px 18px; 
+  background: var(--panel); 
+  border: 1px solid var(--border); 
+  color: var(--accent); 
+  text-decoration: none; 
+  border-radius: 14px; 
+  font-size: 10px; 
+  font-weight: 900; 
+  letter-spacing: 1px; 
+  transition: all 0.2s ease; 
 }
 
-.modal-round-options label:hover {
-  background: rgba(109, 124, 255, 0.1);
-  border-color: rgba(109, 124, 255, 0.3);
-  transform: translateY(-1px);
-}
+.btn-watch::before { content: '▶'; font-size: 8px; }
 
-.modal-round-options label.active {
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+.btn-watch:hover { 
+  background: var(--accent); 
+  color: #fff; 
   border-color: var(--accent);
-  color: white;
-  box-shadow: 0 8px 20px rgba(109, 124, 255, 0.25);
-}
-
-.modal-round-options input {
-  accent-color: var(--accent);
-  margin-right: 8px;
-}
-
-.modal-footer {
-  padding: 20px 24px 24px;
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  border-top: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.btn-cancel,
-.btn-save {
-  padding: 12px 24px;
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  font-size: 15px;
-  font-weight: 600;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  min-height: 48px;
-}
-
-.btn-cancel {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--text);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-}
-
-.btn-cancel:hover {
-  background: rgba(255, 255, 255, 0.12);
-  transform: translateY(-1px);
-}
-
-.btn-save {
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
-  color: white;
-  box-shadow: 0 8px 20px rgba(109, 124, 255, 0.3);
-}
-
-.btn-save:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(109, 124, 255, 0.4);
 }
 
-.modal-error {
-  color: var(--danger);
-  margin-top: 12px;
-  font-size: 14px;
-  padding: 12px;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
+.card-footer { 
+  margin-top: auto; 
+  padding-top: 20px; 
+  border-top: 1px solid var(--border); 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+}
+
+.entry-date { 
+  font-size: 11px; 
+  color: var(--muted); 
+  font-weight: 700; 
+  font-family: monospace; 
+}
+
+.btn-trash-icon { 
+  background: none; 
+  border: none; 
+  cursor: pointer; 
+  color: var(--muted); 
+  opacity: 0.4; 
+  transition: all 0.2s ease; 
+  font-size: 18px;
+  padding: 5px;
   border-radius: 8px;
 }
 
-@media (max-width: 640px) {
-  .modal-footer {
-    flex-direction: column;
-  }
-
-  .btn-cancel,
-  .btn-save {
-    width: 100%;
-  }
-
-  .modal-round-options {
-    flex-direction: column;
-  }
+.btn-trash-icon:hover { 
+  color: #ef4444; 
+  opacity: 1; 
+  transform: scale(1.1);
+  background: rgba(239, 68, 68, 0.1);
 }
 </style>
