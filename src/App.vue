@@ -37,9 +37,6 @@
     />
   </div>
 </nav>
-
-
-
         <button :disabled="!activeMap || maps.length === 0" class="btn-deploy-trigger" @click="view = 'creator'">
           DEPLOY STRATEGY
         </button>
@@ -48,21 +45,23 @@
 
     <main class="viewport">
       <header class="top-nav">
-        <div class="nav-left">
-          <div class="version-tag">SYSTEM v3.4 // READY</div>
-        </div>
-        
-        <div class="nav-right">
-          <button @click="toggleTheme" class="btn-toggle-hud">
-            {{ theme === 'dark' ? '☀️ LIGHT HUD' : '🌙 DARK HUD' }}
-          </button>
-          <div class="status-badge">
-            <span class="s-label">DATABASE UNITS:</span>
-            <span class="s-value">{{ filteredStrats.length }}</span>
-          </div>
-        </div>
-      </header>
-
+  <div class="nav-left">
+    <button class="hamburger-btn" @click="toggleSidebar">
+      ☰
+    </button>
+    <div class="version-tag">SYSTEM v3.4 // READY</div>
+  </div>
+  
+  <div class="nav-right">
+    <button @click="toggleTheme" class="btn-toggle-hud">
+      {{ theme === 'dark' ? '☀️ LIGHT HUD' : '🌙 DARK HUD' }}
+    </button>
+    <div class="status-badge">
+      <span class="s-label">DATABASE UNITS:</span>
+      <span class="s-value">{{ filteredStrats.length }}</span>
+    </div>
+  </div>
+</header>
       <section v-if="view === 'library'" class="main-view">
         <div class="content-header">
   <h2 class="active-sector-title">{{ activeMap || 'OFFLINE' }}</h2>
@@ -207,10 +206,12 @@ export default {
       strats: JSON.parse(localStorage.getItem(DATA_KEY)) || [],
       fSide: 'all',
       fSite: 'all',
+      sidebarOpen: false,
       favoriteMode: false,
       showSearch: false,
       searchQuery: '',
       roundFilter: 'all',
+      hashtagFilter: '',
       roundTypes: [
   { value: 'all',    label: 'ALL',    icon: '🔄' },
   { value: 'pistol', label: 'PISTOL', icon: '🔫' },
@@ -234,6 +235,13 @@ export default {
       (s.description && s.description.toLowerCase().includes(this.searchQuery.toLowerCase()));
     
     return matchMap && matchSide && matchSite && matchRound && matchSearch;
+    const matchHashtag = !this.hashtagFilter || 
+  (s.hashtags && s.hashtags.some(tag => 
+    tag.toLowerCase().includes(this.hashtagFilter.toLowerCase())
+  ));
+
+return matchMap && matchSide && matchSite && matchRound && matchSearch && matchHashtag;
+    
   });
 
   if (this.favoriteMode) {
@@ -259,13 +267,26 @@ export default {
       this.theme = this.theme === 'dark' ? 'light' : 'dark';
       localStorage.setItem(THEME_KEY, this.theme);
     },
+    
     toggleFavorite(id) {
       const strat = this.strats.find(s => s.id === id);
       if (strat) {
     strat.favorite = !strat.favorite;
     this.persist();
-  }
-},
+      }
+    },
+   toggleSidebar() {
+    this.sidebarOpen = !this.sidebarOpen;
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) {
+      sidebar.classList.toggle('open', this.sidebarOpen);
+    }
+  },
+  closeSidebar() {
+    this.sidebarOpen = false;
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) sidebar.classList.remove('open');
+  },
     changeMap(m) { this.activeMap = m; this.view = 'library'; },
     addMap() {
       const n = this.newMapInput.trim().toUpperCase();
@@ -1152,4 +1173,109 @@ body, html {
   color: white;
   box-shadow: 0 0 20px rgba(0, 209, 255, 0.3);
 }
+/*Mobile Adapt*/
+@media (max-width: 900px) {
+  .sidebar {
+    position: fixed;
+    left: -320px;
+    top: 0;
+    height: 100%;
+    z-index: 2000;
+    transition: left 0.3s ease;
+  }
+
+  .sidebar.open {
+    left: 0;
+  }
+
+  .viewport {
+    padding: 20px 15px;
+  }
+
+  .active-sector-title {
+    font-size: 28px;
+  }
+
+  .tactical-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .content-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .header-right {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .filter-panel {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .f-pill {
+    padding: 8px 14px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .viewport {
+    padding: 15px 10px;
+  }
+  
+  .strat-card {
+    margin-bottom: 15px;
+  }
+}
+.hamburger-btn {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: var(--text);
+  cursor: pointer;
+  padding: 8px 12px;
+  margin-right: 10px;
+}
+
+@media (max-width: 900px) {
+  .hamburger-btn {
+    display: block;
+  }
+
+  .sidebar {
+    position: fixed;
+    left: -320px;
+    top: 0;
+    height: 100vh;
+    z-index: 2000;
+    transition: left 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+    box-shadow: 5px 0 25px rgba(0, 0, 0, 0.6);
+  }
+
+  .sidebar.open {
+    left: 0;
+  }
+}
+
+/* Overlay */
+.sidebar.open::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.sidebar.open::before {
+  opacity: 1;
+}
+/*Mobile Adapt*/
 </style>

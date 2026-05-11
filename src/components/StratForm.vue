@@ -1,6 +1,7 @@
 <template>
   <div class="form-overlay" @click.self="$emit('close')">
     <div class="protocol-card">
+      <!-- Header -->
       <header class="protocol-header">
         <div class="h-text">
           <span class="protocol-id">TACTICAL INITIALIZATION</span>
@@ -9,105 +10,75 @@
         <button @click="$emit('close')" class="btn-protocol-close">✕</button>
       </header>
 
+      <!-- Основное содержимое -->
       <div class="protocol-body">
         <div class="protocol-grid">
           <!-- Левая колонка -->
           <div class="grid-left">
             <div class="input-field">
               <label>STRATEGY DESIGNATION <span class="required">*</span></label>
-              <input 
-                v-model="form.name" 
-                class="hud-input-dark" 
-                placeholder="e.g. MIRAGE FAST A-SITE SMOKES"
-                maxlength="100"
-                @input="validateName"
-              >
-              <span v-if="nameError" class="field-error">{{ nameError }}</span>
+              <input v-model="form.name" class="hud-input-dark" placeholder="e.g. MIRAGE FAST A-SITE SMOKES" maxlength="100">
             </div>
             
             <div class="input-field">
               <label>SEQUENTIAL INSTRUCTIONS</label>
-              <textarea 
-                v-model="form.description" 
-                class="hud-input-dark" 
-                rows="8" 
-                placeholder="Enter tactical steps...&#10;&#10;Step 1: Smoke CT spawn&#10;Step 2: Flash A site..."
-                maxlength="2000"
-              ></textarea>
+              <textarea v-model="form.description" class="hud-input-dark" rows="8" placeholder="Enter tactical steps...&#10;&#10;Step 1: Smoke CT spawn"></textarea>
             </div>
 
             <div class="input-field">
               <label>DIGITAL FOOTAGE (URL)</label>
+              <input v-model="form.videoUrl" class="hud-input-dark" placeholder="https://youtube.com/...">
+            </div>
+
+            <!-- HASHTAGS -->
+            <div class="input-field">
+              <label>HASHTAGS <span class="field-hint">(Separated by commas)</span></label>
               <input 
-                v-model="form.videoUrl" 
+                v-model="hashtagInput"
+                @keyup.enter="addHashtag"
+                @blur="addHashtag"
                 class="hud-input-dark" 
-                placeholder="https://youtube.com/..."
-                type="url"
-                @blur="validateUrl"
+                placeholder="#fastexec, #smokes, #a-rush..."
               >
-              <span v-if="urlError" class="field-error">{{ urlError }}</span>
+              <div class="hashtag-list">
+                <span 
+                  v-for="(tag, i) in form.hashtags" 
+                  :key="i"
+                  class="hashtag-pill"
+                  @click="removeHashtag(i)"
+                >
+                  #{{ tag }} ✕
+                </span>
+              </div>
             </div>
           </div>
 
           <!-- Правая колонка -->
           <div class="grid-right">
-            <!-- TEAM SIDE -->
             <div class="input-field">
               <label>TEAM SIDE <span class="required">*</span></label>
               <div class="switch-group">
-                <button 
-                  @click="form.side = 't'" 
-                  :class="{ active: form.side === 't' }" 
-                  class="btn-side t"
-                  type="button"
-                >
-                  ⚔️ T SIDE
-                </button>
-                <button 
-                  @click="form.side = 'ct'" 
-                  :class="{ active: form.side === 'ct' }" 
-                  class="btn-side ct"
-                  type="button"
-                >
-                  🛡️ CT SIDE
-                </button>
+                <button @click="form.side = 't'" :class="{ active: form.side === 't' }" class="btn-side t">⚔️ T SIDE</button>
+                <button @click="form.side = 'ct'" :class="{ active: form.side === 'ct' }" class="btn-side ct">🛡️ CT SIDE</button>
               </div>
             </div>
 
-            <!-- ROUND TYPE -->
             <div class="input-field">
               <label>ROUND TYPE <span class="required">*</span></label>
               <div class="round-type-switch">
-                <button 
-                  v-for="rt in roundTypes" 
-                  :key="rt.value"
-                  @click="form.roundType = rt.value"
-                  :class="{ active: form.roundType === rt.value }"
-                  type="button"
-                >
-                  <span class="rt-icon">{{ rt.icon }}</span>
-                  {{ rt.label }}
+                <button v-for="rt in roundTypes" :key="rt.value" @click="form.roundType = rt.value" :class="{ active: form.roundType === rt.value }">
+                  <span class="rt-icon">{{ rt.icon }}</span> {{ rt.label }}
                 </button>
               </div>
             </div>
 
-            <!-- TARGET SECTOR -->
             <div class="input-field">
               <label>TARGET SECTOR</label>
               <div class="site-switch">
-                <button 
-                  v-for="s in sites" 
-                  :key="s.value" 
-                  @click="form.site = s.value" 
-                  :class="{ active: form.site === s.value }"
-                  type="button"
-                >
-                  {{ s.label }}
-                </button>
+                <button v-for="s in sites" :key="s.value" @click="form.site = s.value" :class="{ active: form.site === s.value }">{{ s.label }}</button>
               </div>
             </div>
 
-            <!-- UTILITY -->
             <div class="input-field">
               <label>UTILITY ALLOCATION</label>
               <div class="utility-setup">
@@ -126,6 +97,7 @@
         </div>
       </div>
 
+      <!-- Футер -->
       <footer class="protocol-footer">
         <div class="footer-actions">
           <button @click="$emit('close')" class="btn-protocol-cancel">ABORT MISSION</button>
@@ -153,10 +125,12 @@ export default {
         name: '',
         description: '',
         videoUrl: '',
+        hashtagInput: '',
         side: 't',
         site: 'A',
         roundType: 'full',
-        utility: { smokes: 0, mollys: 0, flashes: 0 }
+        utility: { smokes: 0, mollys: 0, flashes: 0, he: 0 },
+        hashtags: []
       },
       nameError: '',
       urlError: '',
@@ -175,7 +149,8 @@ export default {
       utilities: [
         { key: 'smokes', icon: '☁️', label: 'Smokes' },
         { key: 'mollys', icon: '🔥', label: 'Mollys' },
-        { key: 'flashes', icon: '✨', label: 'Flashes' }
+        { key: 'flashes', icon: '✨', label: 'Flashes' },
+        { key: 'he',      icon: '💣', label: 'HE' }
       ]
     }
   },
@@ -209,11 +184,32 @@ export default {
       this.$emit('submit', { ...this.form });
       this.resetForm();
     },
+    addHashtag() {
+  const input = this.hashtagInput.trim();
+  if (!input) return;
+
+  const tags = input.split(',').map(t => 
+    t.trim().replace(/^#/, '').toLowerCase()
+  ).filter(t => t.length > 0);
+
+  tags.forEach(tag => {
+    if (!this.form.hashtags.includes(tag)) {
+      this.form.hashtags.push(tag);
+    }
+  });
+
+  this.hashtagInput = '';
+},
+
+removeHashtag(index) {
+  this.form.hashtags.splice(index, 1);
+},
     resetForm() {
       this.form = {
         name: '', description: '', videoUrl: '', side: 't', site: 'A',
         roundType: 'full',
-        utility: { smokes: 0, mollys: 0, flashes: 0 }
+        utility: { smokes: 0, mollys: 0, flashes: 0, he: 0 },
+        hashtags: []
       };
       this.nameError = '';
       this.urlError = '';
@@ -241,16 +237,17 @@ export default {
   to { opacity: 1; }
 }
 
-.protocol-card { 
-  background: var(--surface); 
-  border: 1px solid var(--border); 
-  border-radius: 32px; 
-  width: 100%; 
-  max-width: 900px; 
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 40px 100px rgba(0,0,0,0.6); 
-  animation: slideUp 0.3s ease;
+.protocol-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 32px;
+  width: 100%;
+  max-width: 920px;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 40px 100px rgba(0,0,0,0.6);
 }
 
 @keyframes slideUp {
@@ -315,8 +312,10 @@ export default {
   background: var(--panel);
 }
 
-.protocol-body { 
-  padding: 45px 50px; 
+.protocol-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 45px 50px;
 }
 
 .protocol-grid { 
@@ -570,13 +569,11 @@ label {
 }
 
 /* FOOTER */
-.protocol-footer { 
-  padding: 30px 50px 40px; 
+.protocol-footer {
+  padding: 30px 50px 40px;
   border-top: 1px solid var(--border);
-  position: sticky;
-  bottom: 0;
   background: var(--surface);
-  border-radius: 0 0 32px 32px;
+  flex-shrink: 0;
 }
 
 .footer-actions {
@@ -639,34 +636,54 @@ label {
   letter-spacing: 0.5px;
 }
 
-/* RESPONSIVE */
-@media (max-width: 768px) {
-  .form-overlay {
-    padding: 10px;
+.protocol-grid { 
+  display: grid; 
+  grid-template-columns: 1.2fr 0.8fr; 
+  gap: 50px; 
+}
+
+/* Адаптив для формы */
+@media (max-width: 900px) {
+  .protocol-card {
+    max-width: 100%;
+    margin: 10px;
+    max-height: 95vh;
   }
-  
+
   .protocol-header,
   .protocol-body,
   .protocol-footer {
-    padding-left: 25px;
-    padding-right: 25px;
+    padding-left: 20px;
+    padding-right: 20px;
   }
-  
+
+  .protocol-body {
+    padding-top: 30px;
+    padding-bottom: 30px;
+  }
+
   .protocol-grid {
-    grid-template-columns: 1fr;
-    gap: 0;
+    grid-template-columns: 1fr !important;
+    gap: 35px;
   }
-  
-  .footer-actions {
+
+  .input-field {
+    margin-bottom: 28px;
+  }
+
+  .round-type-switch,
+  .site-switch {
+    grid-template-columns: 1fr;
+  }
+
+  .switch-group {
     flex-direction: column;
   }
-  
+
+  .btn-protocol-submit,
   .btn-protocol-cancel {
-    order: 2;
-  }
-  
-  .btn-protocol-submit {
-    order: 1;
+    padding: 16px;
+    font-size: 14px;
   }
 }
 .round-type-switch {
@@ -708,4 +725,5 @@ label {
 .rt-icon {
   font-size: 18px;
 }
+
 </style>

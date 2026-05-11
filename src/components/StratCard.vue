@@ -43,6 +43,15 @@
           ANALYZE DATA STREAM
         </a>
       </div>
+      <div class="hashtags" v-if="strat.hashtags && strat.hashtags.length">
+  <span 
+    v-for="tag in strat.hashtags" 
+    :key="tag"
+    class="hashtag-pill-small"
+  >
+    #{{ tag }}
+  </span>
+</div>
 
       <footer class="card-footer">
   <span class="entry-date">{{ formattedDate }}</span>
@@ -340,5 +349,20 @@ export default {
   opacity: 1; 
   transform: scale(1.1);
   background: rgba(239, 68, 68, 0.1);
+}
+.hashtags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.hashtag-pill-small {
+  background: var(--panel);
+  color: var(--accent);
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  border: 1px solid rgba(0, 209, 255, 0.2);
 }
 </style>
