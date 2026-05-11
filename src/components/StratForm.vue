@@ -6,13 +6,7 @@
           <span class="protocol-id">TACTICAL INITIALIZATION</span>
           <h2>SECTOR: <span class="accent">{{ activeMap }}</span></h2>
         </div>
-        <button 
-          @click="$emit('close')" 
-          class="btn-protocol-close" 
-          title="Close form"
-        >
-          ✕
-        </button>
+        <button @click="$emit('close')" class="btn-protocol-close">✕</button>
       </header>
 
       <div class="protocol-body">
@@ -20,10 +14,7 @@
           <!-- Левая колонка -->
           <div class="grid-left">
             <div class="input-field">
-              <label>
-                STRATEGY DESIGNATION 
-                <span class="required">*</span>
-              </label>
+              <label>STRATEGY DESIGNATION <span class="required">*</span></label>
               <input 
                 v-model="form.name" 
                 class="hud-input-dark" 
@@ -32,9 +23,6 @@
                 @input="validateName"
               >
               <span v-if="nameError" class="field-error">{{ nameError }}</span>
-              <span v-else-if="form.name.length > 80" class="field-hint">
-                {{ form.name.length }}/100 characters
-              </span>
             </div>
             
             <div class="input-field">
@@ -43,12 +31,9 @@
                 v-model="form.description" 
                 class="hud-input-dark" 
                 rows="8" 
-                placeholder="Enter tactical steps...&#10;&#10;Step 1: Smoke CT spawn&#10;Step 2: Flash A site&#10;Step 3: ..."
+                placeholder="Enter tactical steps...&#10;&#10;Step 1: Smoke CT spawn&#10;Step 2: Flash A site..."
                 maxlength="2000"
               ></textarea>
-              <span v-if="form.description.length > 1500" class="field-hint">
-                {{ form.description.length }}/2000 characters
-              </span>
             </div>
 
             <div class="input-field">
@@ -61,14 +46,12 @@
                 @blur="validateUrl"
               >
               <span v-if="urlError" class="field-error">{{ urlError }}</span>
-              <span v-else-if="form.videoUrl && !urlError" class="field-success">
-                ✓ Valid URL format
-              </span>
             </div>
           </div>
 
           <!-- Правая колонка -->
           <div class="grid-right">
+            <!-- TEAM SIDE -->
             <div class="input-field">
               <label>TEAM SIDE <span class="required">*</span></label>
               <div class="switch-group">
@@ -78,8 +61,7 @@
                   class="btn-side t"
                   type="button"
                 >
-                  <span class="side-icon">⚔️</span>
-                  T SIDE
+                  ⚔️ T SIDE
                 </button>
                 <button 
                   @click="form.side = 'ct'" 
@@ -87,12 +69,29 @@
                   class="btn-side ct"
                   type="button"
                 >
-                  <span class="side-icon">🛡️</span>
-                  CT SIDE
+                  🛡️ CT SIDE
                 </button>
               </div>
             </div>
 
+            <!-- ROUND TYPE -->
+            <div class="input-field">
+              <label>ROUND TYPE <span class="required">*</span></label>
+              <div class="round-type-switch">
+                <button 
+                  v-for="rt in roundTypes" 
+                  :key="rt.value"
+                  @click="form.roundType = rt.value"
+                  :class="{ active: form.roundType === rt.value }"
+                  type="button"
+                >
+                  <span class="rt-icon">{{ rt.icon }}</span>
+                  {{ rt.label }}
+                </button>
+              </div>
+            </div>
+
+            <!-- TARGET SECTOR -->
             <div class="input-field">
               <label>TARGET SECTOR</label>
               <div class="site-switch">
@@ -102,97 +101,25 @@
                   @click="form.site = s.value" 
                   :class="{ active: form.site === s.value }"
                   type="button"
-                  :title="s.description"
                 >
                   {{ s.label }}
                 </button>
               </div>
             </div>
 
+            <!-- UTILITY -->
             <div class="input-field">
               <label>UTILITY ALLOCATION</label>
               <div class="utility-setup">
-                <div class="u-row">
-                  <span class="u-icon">☁️</span>
+                <div class="u-row" v-for="util in utilities" :key="util.key">
+                  <span class="u-icon">{{ util.icon }}</span>
                   <div class="u-control">
-                    <button 
-                      @click="decrementUtility('smokes')" 
-                      class="u-btn"
-                      :disabled="form.utility.smokes <= 0"
-                      type="button"
-                    >−</button>
-                    <input 
-                      type="number" 
-                      v-model.number="form.utility.smokes" 
-                      min="0" 
-                      max="5"
-                      class="u-input"
-                    >
-                    <button 
-                      @click="incrementUtility('smokes')" 
-                      class="u-btn"
-                      :disabled="form.utility.smokes >= 5"
-                      type="button"
-                    >+</button>
+                    <button @click="decrementUtility(util.key)" class="u-btn" :disabled="form.utility[util.key] <= 0">-</button>
+                    <input type="number" v-model.number="form.utility[util.key]" min="0" max="5" class="u-input">
+                    <button @click="incrementUtility(util.key)" class="u-btn" :disabled="form.utility[util.key] >= 5">+</button>
                   </div>
-                  <span class="u-label">Smokes</span>
+                  <span class="u-label">{{ util.label }}</span>
                 </div>
-                
-                <div class="u-row">
-                  <span class="u-icon">🔥</span>
-                  <div class="u-control">
-                    <button 
-                      @click="decrementUtility('mollys')" 
-                      class="u-btn"
-                      :disabled="form.utility.mollys <= 0"
-                      type="button"
-                    >−</button>
-                    <input 
-                      type="number" 
-                      v-model.number="form.utility.mollys" 
-                      min="0" 
-                      max="5"
-                      class="u-input"
-                    >
-                    <button 
-                      @click="incrementUtility('mollys')" 
-                      class="u-btn"
-                      :disabled="form.utility.mollys >= 5"
-                      type="button"
-                    >+</button>
-                  </div>
-                  <span class="u-label">Mollys</span>
-                </div>
-                
-                <div class="u-row">
-                  <span class="u-icon">✨</span>
-                  <div class="u-control">
-                    <button 
-                      @click="decrementUtility('flashes')" 
-                      class="u-btn"
-                      :disabled="form.utility.flashes <= 0"
-                      type="button"
-                    >−</button>
-                    <input 
-                      type="number" 
-                      v-model.number="form.utility.flashes" 
-                      min="0" 
-                      max="5"
-                      class="u-input"
-                    >
-                    <button 
-                      @click="incrementUtility('flashes')" 
-                      class="u-btn"
-                      :disabled="form.utility.flashes >= 5"
-                      type="button"
-                    >+</button>
-                  </div>
-                  <span class="u-label">Flashes</span>
-                </div>
-              </div>
-              
-              <div class="utility-total" v-if="totalUtility > 0">
-                Total utility: {{ totalUtility }} grenades
               </div>
             </div>
           </div>
@@ -201,20 +128,9 @@
 
       <footer class="protocol-footer">
         <div class="footer-actions">
-          <button 
-            @click="$emit('close')" 
-            class="btn-protocol-cancel"
-            type="button"
-          >
-            ABORT MISSION
-          </button>
-          <button 
-            @click="handleDeploy" 
-            class="btn-protocol-submit"
-            :disabled="!isFormValid"
-            type="button"
-          >
-            {{ isFormValid ? 'DEPLOY DATA TO REGISTRY' : 'FILL REQUIRED FIELDS' }}
+          <button @click="$emit('close')" class="btn-protocol-cancel">ABORT MISSION</button>
+          <button @click="handleDeploy" class="btn-protocol-submit" :disabled="!isFormValid">
+            {{ isFormValid ? 'DEPLOY TO REGISTRY' : 'FILL REQUIRED FIELDS' }}
           </button>
         </div>
         <div v-if="!isFormValid" class="form-error-summary">
@@ -228,160 +144,80 @@
 <script>
 export default {
   name: 'StratForm',
-  
-  props: { 
-    activeMap: { 
-      type: String, 
-      required: true 
-    } 
-  },
-  
+  props: { activeMap: { type: String, required: true } },
   emits: ['submit', 'close'],
-  
+
   data() {
     return {
-      form: { 
-        name: '', 
-        description: '', 
-        videoUrl: '', 
-        side: 't', 
-        site: 'A', 
-        utility: { 
-          smokes: 0, 
-          mollys: 0, 
-          flashes: 0 
-        } 
-      },
-      nameError: '',
-      urlError: '',
-      sites: [
-        { value: 'A', label: 'A', description: 'A Bomb Site' },
-        { value: 'B', label: 'B', description: 'B Bomb Site' },
-        { value: 'Mid', label: 'MID', description: 'Middle Area' },
-        { value: 'Any', label: 'ANY', description: 'Any Site' }
-      ]
-    }
-  },
-  
-  computed: {
-    isFormValid() {
-      return this.form.name.trim().length >= 3 && !this.nameError && !this.urlError;
-    },
-    
-    totalUtility() {
-      const { smokes, mollys, flashes } = this.form.utility;
-      return smokes + mollys + flashes;
-    }
-  },
-  
-  methods: {
-    validateName() {
-      const name = this.form.name.trim();
-      
-      if (name.length === 0) {
-        this.nameError = '';
-      } else if (name.length < 3) {
-        this.nameError = 'Designation too short (minimum 3 characters)';
-      } else if (name.length > 100) {
-        this.nameError = 'Designation too long (maximum 100 characters)';
-      } else if (!/^[A-Za-z0-9\s\-_.,!?()]+$/.test(name)) {
-        this.nameError = 'Contains invalid characters';
-      } else {
-        this.nameError = '';
-      }
-    },
-    
-    validateUrl() {
-      const url = this.form.videoUrl.trim();
-      
-      if (url.length === 0) {
-        this.urlError = '';
-        return;
-      }
-      
-      try {
-        const urlObj = new URL(url);
-        if (!['http:', 'https:'].includes(urlObj.protocol)) {
-          this.urlError = 'URL must start with http:// or https://';
-        } else {
-          this.urlError = '';
-        }
-      } catch {
-        if (url.includes('.') && !url.includes(' ') && url.length > 5) {
-          this.urlError = 'Add https:// prefix (e.g. https://' + url + ')';
-        } else {
-          this.urlError = 'Invalid URL format';
-        }
-      }
-    },
-    
-    incrementUtility(type) {
-      if (this.form.utility[type] < 5) {
-        this.form.utility[type]++;
-      }
-    },
-    
-    decrementUtility(type) {
-      if (this.form.utility[type] > 0) {
-        this.form.utility[type]--;
-      }
-    },
-    
-    handleDeploy() {
-      this.validateName();
-      if (this.form.videoUrl) {
-        this.validateUrl();
-      }
-      
-      if (!this.isFormValid) {
-        if (!this.form.name.trim()) {
-          alert('SYSTEM ERROR: STRATEGY DESIGNATION REQUIRED');
-        }
-        return;
-      }
-      
-      // Создаем копию объекта для отправки
-      const payload = {
-        name: this.form.name.trim(),
-        description: this.form.description.trim(),
-        videoUrl: this.form.videoUrl.trim(),
-        side: this.form.side,
-        site: this.form.site,
-        utility: { ...this.form.utility }
-      };
-      
-      this.$emit('submit', payload);
-      
-      // Сброс формы после успешной отправки
-      this.resetForm();
-    },
-    
-    resetForm() {
-      this.form = {
+      form: {
         name: '',
         description: '',
         videoUrl: '',
         side: 't',
         site: 'A',
-        utility: {
-          smokes: 0,
-          mollys: 0,
-          flashes: 0
-        }
+        roundType: 'full',
+        utility: { smokes: 0, mollys: 0, flashes: 0 }
+      },
+      nameError: '',
+      urlError: '',
+      sites: [
+        { value: 'A', label: 'A' },
+        { value: 'B', label: 'B' },
+        { value: 'Mid', label: 'MID' },
+        { value: 'Any', label: 'ANY' }
+      ],
+      roundTypes: [
+        { value: 'pistol', label: 'Pistol', icon: '🔫' },
+        { value: 'eco',    label: 'Eco',    icon: '🐭' },
+        { value: 'force',  label: 'Force',  icon: '⚡' },
+        { value: 'full',   label: 'Full Buy', icon: '💰' }
+      ],
+      utilities: [
+        { key: 'smokes', icon: '☁️', label: 'Smokes' },
+        { key: 'mollys', icon: '🔥', label: 'Mollys' },
+        { key: 'flashes', icon: '✨', label: 'Flashes' }
+      ]
+    }
+  },
+
+  computed: {
+    isFormValid() {
+      return this.form.name.trim().length >= 3 && !this.nameError;
+    }
+  },
+
+  methods: {
+    validateName() {
+      const name = this.form.name.trim();
+      if (name.length > 0 && name.length < 3) {
+        this.nameError = 'Minimum 3 characters';
+      } else {
+        this.nameError = '';
+      }
+    },
+    validateUrl() { /* ... */ },
+    incrementUtility(key) {
+      if (this.form.utility[key] < 5) this.form.utility[key]++;
+    },
+    decrementUtility(key) {
+      if (this.form.utility[key] > 0) this.form.utility[key]--;
+    },
+    handleDeploy() {
+      this.validateName();
+      if (!this.isFormValid) return;
+
+      this.$emit('submit', { ...this.form });
+      this.resetForm();
+    },
+    resetForm() {
+      this.form = {
+        name: '', description: '', videoUrl: '', side: 't', site: 'A',
+        roundType: 'full',
+        utility: { smokes: 0, mollys: 0, flashes: 0 }
       };
       this.nameError = '';
       this.urlError = '';
     }
-  },
-  
-  mounted() {
-    // Автофокус на поле имени при открытии формы
-    this.$nextTick(() => {
-      const nameInput = this.$el.querySelector('input[type="text"]');
-      if (nameInput) {
-        nameInput.focus();
-      }
-    });
   }
 }
 </script>
@@ -832,5 +668,44 @@ label {
   .btn-protocol-submit {
     order: 1;
   }
+}
+.round-type-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.round-type-switch button {
+  flex: 1;
+  min-width: 110px;
+  padding: 14px 12px;
+  background: var(--panel);
+  border: 2px solid var(--border);
+  color: var(--muted);
+  border-radius: 14px;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.25s ease;
+}
+
+.round-type-switch button:hover:not(.active) {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.round-type-switch button.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+  box-shadow: 0 0 20px rgba(0, 209, 255, 0.4);
+}
+
+.rt-icon {
+  font-size: 18px;
 }
 </style>

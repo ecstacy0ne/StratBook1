@@ -5,6 +5,9 @@
         <div class="site-tag" :class="getSiteClass(strat.site)">
           {{ strat.site || '?' }}
         </div>
+        <div class="round-type-badge" :class="strat.roundType">
+          {{ getRoundIcon(strat.roundType) }}
+        </div>
         <div class="util-display" v-if="hasUtility">
           <div v-if="strat.utility.smokes > 0" class="u-unit">
             <span class="u-icon">☁️</span> 
@@ -42,11 +45,22 @@
       </div>
 
       <footer class="card-footer">
-        <span class="entry-date">{{ formattedDate }}</span>
-        <button @click="handleDelete" class="btn-trash-icon" title="Delete strategy">
-          🗑️
-        </button>
-      </footer>
+  <span class="entry-date">{{ formattedDate }}</span>
+  
+  <div class="footer-right">
+    <button 
+      @click="$emit('toggle-favorite', strat.id)" 
+      class="fav-btn"
+      :class="{ active: strat.favorite }"
+      title="Add to favorites"
+    >
+      {{ strat.favorite ? '★' : '☆' }}
+    </button>
+    <button @click="handleDelete" class="btn-trash-icon" title="Delete strategy">
+      🗑️
+    </button>
+  </div>
+</footer>
     </div>
   </div>
 </template>
@@ -62,7 +76,7 @@ export default {
     }
   },
   
-  emits: ['delete'],
+ emits: ['delete', 'toggle-favorite'],
   
   computed: {
     sanitizedVideoUrl() {
@@ -111,6 +125,10 @@ export default {
       if (['a', 'b', 'mid', 'any'].includes(s)) return s;
       return '';
     },
+    getRoundIcon(type) {
+      const map = { pistol: '🔫', eco: '🐭', force: '⚡', full: '💰' };
+      return map[type] || '❓';
+    },
     
     handleDelete() {
       if (confirm('Delete this strategy?')) {
@@ -122,6 +140,38 @@ export default {
 </script>
 
 <style scoped>
+.footer-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.fav-btn {
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  color: var(--muted);
+  transition: all 0.2s ease;
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.fav-btn:hover {
+  color: #ffd700;
+  transform: scale(1.2);
+}
+
+.fav-btn.active {
+  color: #ffd700;
+  animation: favPop 0.3s ease;
+}
+
+@keyframes favPop {
+  0% { transform: scale(0.5); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
 .strat-card { 
   background: var(--surface); 
   border: 1px solid var(--border); 
@@ -226,7 +276,7 @@ export default {
   max-height: 4.8em; 
   overflow: hidden; 
   display: -webkit-box; 
-  -webkit-line-clamp: 3; 
+  -line-clamp: 3; 
   -webkit-box-orient: vertical;
   word-break: break-word;
 }

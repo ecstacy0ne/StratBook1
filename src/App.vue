@@ -11,21 +11,34 @@
         </div>
         
         <nav class="map-registry">
-          <div class="registry-header">
-            <span>SECTOR REGISTRY</span>
-            <button @click="view = 'settings'" class="btn-settings" title="Configuration">⚙️</button>
-          </div>
-          
-          <div class="map-list-area">
-            <MapButton 
-              v-for="m in maps" 
-              :key="m" 
-              :map="m" 
-              :is-active="activeMap === m" 
-              @select="changeMap" 
-            />
-          </div>
-        </nav>
+  <div class="registry-header">
+    <span>SECTOR REGISTRY</span>
+    <button @click="view = 'settings'" class="btn-settings" title="Configuration">⚙️</button>
+  </div>
+  
+  <!-- Кнопка Избранного -->
+  <button 
+    class="btn-favorites-nav" 
+    :class="{ active: favoriteMode }"
+    @click="favoriteMode = !favoriteMode; view = 'library'"
+  >
+    <span class="fav-icon">⭐</span>
+    <span class="fav-label">FAVORITES</span>
+    <span class="fav-count">{{ favoriteStrats.length }}</span>
+  </button>
+
+  <div class="map-list-area">
+    <MapButton 
+      v-for="m in maps" 
+      :key="m" 
+      :map="m" 
+      :is-active="activeMap === m" 
+      @select="changeMap" 
+    />
+  </div>
+</nav>
+
+
 
         <button :disabled="!activeMap || maps.length === 0" class="btn-deploy-trigger" @click="view = 'creator'">
           DEPLOY STRATEGY
@@ -52,23 +65,62 @@
 
       <section v-if="view === 'library'" class="main-view">
         <div class="content-header">
-          <h2 class="active-sector-title">{{ activeMap || 'OFFLINE' }}</h2>
-          
-          <div class="filter-panel" v-if="activeMap && maps.length > 0">
-            <div class="filter-group">
-              <button v-for="s in ['all', 't', 'ct']" :key="s" 
-                @click="fSide = s" :class="['f-pill', s, { active: fSide === s }]">
-                {{ s.toUpperCase() }}
-              </button>
-            </div>
-            <div class="filter-group">
-              <button v-for="site in ['all', 'A', 'B', 'Mid']" :key="site" 
-                @click="fSite = site" :class="['f-pill', { active: fSite === site }]">
-                {{ site === 'all' ? 'ANY SITE' : site }}
-              </button>
-            </div>
-          </div>
-        </div>
+  <h2 class="active-sector-title">{{ activeMap || 'OFFLINE' }}</h2>
+  
+  <div class="header-right">
+  <!-- Кнопка поиска -->
+  <button 
+    class="btn-search-toggle"
+    @click="showSearch = !showSearch"
+    :class="{ active: showSearch }"
+  >
+    🔍
+  </button>
+
+  <div v-if="showSearch" class="search-input-wrapper">
+    <input 
+      v-model="searchQuery" 
+      placeholder="SEARCH TACTICAL DATA..."
+      class="hud-search-input"
+      autofocus
+    >
+    <button v-if="searchQuery" class="search-clear-btn" @click="searchQuery = ''">✕</button>
+  </div>
+
+   <!-- Фильтры -->
+   <div class="filter-panel">
+     <!-- Side -->
+     <div class="filter-group">
+       <button v-for="s in ['all', 't', 'ct']" :key="s" 
+         @click="fSide = s" 
+         :class="['f-pill', s, { active: fSide === s }]">
+         {{ s.toUpperCase() }}
+       </button>
+     </div>
+ 
+     <!-- Site -->
+     <div class="filter-group">
+       <button v-for="site in ['all', 'A', 'B', 'Mid']" :key="site" 
+         @click="fSite = site" 
+         :class="['f-pill', { active: fSite === site }]">
+         {{ site === 'all' ? 'ANY SITE' : site }}
+       </button>
+     </div>
+ 
+     <!-- Round Type -->
+     <div class="filter-group round-filter">
+       <button 
+         v-for="type in roundTypes" 
+         :key="type.value"
+         @click="roundFilter = type.value"
+         :class="['f-pill', 'round', type.value, { active: roundFilter === type.value }]"
+       >
+         {{ type.icon }} {{ type.label }}
+       </button>
+     </div>
+   </div>
+ </div>
+</div>
 
         <div v-if="filteredStrats.length === 0" class="empty-state-hud">
           <div class="hud-circle-icon">
@@ -88,6 +140,7 @@
             :key="item.id" 
             :strat="item" 
             @delete="deleteStrat(item.id)" 
+            @toggle-favorite="toggleFavorite"
           />
         </div>
       </section>
@@ -128,6 +181,8 @@
       />
     </main>
   </div>
+  
+
 </template>
 
 <script>
@@ -152,17 +207,43 @@ export default {
       strats: JSON.parse(localStorage.getItem(DATA_KEY)) || [],
       fSide: 'all',
       fSite: 'all',
+      favoriteMode: false,
+      showSearch: false,
+      searchQuery: '',
+      roundFilter: 'all',
+      roundTypes: [
+  { value: 'all',    label: 'ALL',    icon: '🔄' },
+  { value: 'pistol', label: 'PISTOL', icon: '🔫' },
+  { value: 'eco',    label: 'ECO',    icon: '🐭' },
+  { value: 'force',  label: 'FORCE',  icon: '⚡' },
+  { value: 'full',   label: 'FULL',   icon: '💰' }
+],
       newMapInput: ''
     }
   },
   computed: {
-    filteredStrats() {
-      return this.strats.filter(s => {
-        const matchMap = s.map === this.activeMap;
-        const matchSide = this.fSide === 'all' || s.side === this.fSide;
-        const matchSite = this.fSite === 'all' || (s.site || 'Any') === this.fSite;
-        return matchMap && matchSide && matchSite;
-      });
+  filteredStrats() {
+    let result = this.strats.filter(s => {
+    const matchMap = s.map === this.activeMap;
+    const matchSide = this.fSide === 'all' || s.side === this.fSide;
+    const matchSite = this.fSite === 'all' || (s.site || 'Any') === this.fSite;
+    const matchRound = this.roundFilter === 'all' || s.roundType === this.roundFilter;
+    
+    const matchSearch = !this.searchQuery || 
+      (s.name && s.name.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
+      (s.description && s.description.toLowerCase().includes(this.searchQuery.toLowerCase()));
+    
+    return matchMap && matchSide && matchSite && matchRound && matchSearch;
+  });
+
+  if (this.favoriteMode) {
+    result = result.filter(s => s.favorite);
+  }
+  return result;
+},
+
+  favoriteStrats() {
+    return this.strats.filter(s => s.favorite === true);
     }
   },
   watch: {
@@ -178,6 +259,13 @@ export default {
       this.theme = this.theme === 'dark' ? 'light' : 'dark';
       localStorage.setItem(THEME_KEY, this.theme);
     },
+    toggleFavorite(id) {
+      const strat = this.strats.find(s => s.id === id);
+      if (strat) {
+    strat.favorite = !strat.favorite;
+    this.persist();
+  }
+},
     changeMap(m) { this.activeMap = m; this.view = 'library'; },
     addMap() {
       const n = this.newMapInput.trim().toUpperCase();
@@ -202,7 +290,7 @@ export default {
       }
     },
     saveStrat(p) {
-      this.strats.push({ id: Date.now(), date: new Date().toISOString(), map: this.activeMap, ...p });
+      this.strats.push({ id: Date.now(), date: new Date().toISOString(), map: this.activeMap, favorite: false, ...p });
       this.persist();
       this.view = 'library';
     },
@@ -225,6 +313,12 @@ export default {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+}
+
+.search-container {
+  margin-top: 15px;
+  width: 100%;
+  max-width: 420px;
 }
 
 body, html {
@@ -923,5 +1017,139 @@ body, html {
     width: 100%;
     justify-content: space-between;
   }
+}
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.btn-search-toggle {
+  width: 48px;
+  height: 48px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 12px;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  flex-shrink: 0;
+}
+
+.btn-search-toggle:hover {
+  border-color: var(--accent);
+  background: var(--surface);
+}
+
+.btn-search-toggle.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.search-input-wrapper {
+  position: relative;
+  min-width: 320px;
+  max-width: 420px;
+  min-width: 280px;
+}
+
+.hud-search-input {
+  background: var(--input);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 14px 50px 14px 20px;
+  border-radius: 14px;
+  width: 100%;
+  font-size: 15px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.hud-search-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(0, 209, 255, 0.15);
+}
+
+.search-clear-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.search-clear-btn:hover {
+  color: #ef4444;
+}
+
+/* Адаптивность */
+@media (max-width: 1100px) {
+  .header-right {
+    flex-direction: column;
+    align-items: flex-end;
+  }
+  
+}
+/* === ROUND FILTER IN HEADER === */
+.round-filter .f-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  padding: 8px 14px;
+}
+
+.round-filter .f-pill.round.pistol.active { background: #8b5cf6; color: white; }
+.round-filter .f-pill.round.eco.active    { background: #eab308; color: #000; }
+.round-filter .f-pill.round.force.active  { background: #f97316; color: white; }
+.round-filter .f-pill.round.full.active   { background: #22c55e; color: white; }
+
+/* === ROUND SWITCH IN FORM === */
+.round-type-switch {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 12px;
+}
+
+.round-type-switch button {
+  padding: 16px 12px;
+  background: var(--panel);
+  border: 2px solid var(--border);
+  color: var(--muted);
+  border-radius: 14px;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.25s ease;
+}
+
+.round-type-switch button:hover:not(.active) {
+  border-color: var(--accent);
+  color: var(--text);
+  transform: translateY(-2px);
+}
+
+.round-type-switch button .rt-icon {
+  font-size: 18px;
+}
+
+.round-type-switch button.active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: white;
+  box-shadow: 0 0 20px rgba(0, 209, 255, 0.3);
 }
 </style>
