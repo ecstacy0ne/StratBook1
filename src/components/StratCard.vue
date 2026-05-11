@@ -5,6 +5,9 @@
         <div class="site-tag" :class="getSiteClass(strat.site)">
           {{ strat.site || '?' }}
         </div>
+        <div class="round-type-badge" :class="strat.roundType">
+          {{ getRoundIcon(strat.roundType) }}
+        </div>
         <div class="util-display" v-if="hasUtility">
           <div v-if="strat.utility.smokes > 0" class="u-unit">
             <span class="u-icon">☁️</span> 
@@ -121,6 +124,10 @@ export default {
       const s = site.toLowerCase();
       if (['a', 'b', 'mid', 'any'].includes(s)) return s;
       return '';
+    },
+    getRoundIcon(type) {
+      const map = { pistol: '🔫', eco: '🐭', force: '⚡', full: '💰' };
+      return map[type] || '❓';
     },
     
     handleDelete() {

@@ -68,46 +68,58 @@
   <h2 class="active-sector-title">{{ activeMap || 'OFFLINE' }}</h2>
   
   <div class="header-right">
-    <!-- Кнопка поиска -->
-    <button 
-      class="btn-search-toggle"
-      @click="showSearch = !showSearch"
-      :class="{ active: showSearch }"
+  <!-- Кнопка поиска -->
+  <button 
+    class="btn-search-toggle"
+    @click="showSearch = !showSearch"
+    :class="{ active: showSearch }"
+  >
+    🔍
+  </button>
+
+  <div v-if="showSearch" class="search-input-wrapper">
+    <input 
+      v-model="searchQuery" 
+      placeholder="SEARCH TACTICAL DATA..."
+      class="hud-search-input"
+      autofocus
     >
-      🔍
-    </button>
-
-    <div v-if="showSearch" class="search-input-wrapper">
-      <input 
-        v-model="searchQuery" 
-        placeholder="SEARCH TACTICAL DATA..."
-        class="hud-search-input"
-        autofocus
-      >
-      <button 
-        v-if="searchQuery" 
-        class="search-clear-btn"
-        @click="searchQuery = ''"
-      >
-        ✕
-      </button>
-    </div>
-
-    <div class="filter-panel" v-if="activeMap && maps.length > 0">
-      <div class="filter-group">
-        <button v-for="s in ['all', 't', 'ct']" :key="s" 
-          @click="fSide = s" :class="['f-pill', s, { active: fSide === s }]">
-          {{ s.toUpperCase() }}
-        </button>
-      </div>
-      <div class="filter-group">
-        <button v-for="site in ['all', 'A', 'B', 'Mid']" :key="site" 
-          @click="fSite = site" :class="['f-pill', { active: fSite === site }]">
-          {{ site === 'all' ? 'ANY SITE' : site }}
-        </button>
-      </div>
-    </div>
+    <button v-if="searchQuery" class="search-clear-btn" @click="searchQuery = ''">✕</button>
   </div>
+
+   <!-- Фильтры -->
+   <div class="filter-panel">
+     <!-- Side -->
+     <div class="filter-group">
+       <button v-for="s in ['all', 't', 'ct']" :key="s" 
+         @click="fSide = s" 
+         :class="['f-pill', s, { active: fSide === s }]">
+         {{ s.toUpperCase() }}
+       </button>
+     </div>
+ 
+     <!-- Site -->
+     <div class="filter-group">
+       <button v-for="site in ['all', 'A', 'B', 'Mid']" :key="site" 
+         @click="fSite = site" 
+         :class="['f-pill', { active: fSite === site }]">
+         {{ site === 'all' ? 'ANY SITE' : site }}
+       </button>
+     </div>
+ 
+     <!-- Round Type -->
+     <div class="filter-group round-filter">
+       <button 
+         v-for="type in roundTypes" 
+         :key="type.value"
+         @click="roundFilter = type.value"
+         :class="['f-pill', 'round', type.value, { active: roundFilter === type.value }]"
+       >
+         {{ type.icon }} {{ type.label }}
+       </button>
+     </div>
+   </div>
+ </div>
 </div>
 
         <div v-if="filteredStrats.length === 0" class="empty-state-hud">
@@ -169,14 +181,7 @@
       />
     </main>
   </div>
-
-  <div class="search-box">
-  <input 
-    v-model="searchQuery" 
-    placeholder="SEARCH TACTICAL DATA..." 
-    class="hud-input-main"
-  >
-</div>
+  
 
 </template>
 
@@ -205,28 +210,37 @@ export default {
       favoriteMode: false,
       showSearch: false,
       searchQuery: '',
+      roundFilter: 'all',
+      roundTypes: [
+  { value: 'all',    label: 'ALL',    icon: '🔄' },
+  { value: 'pistol', label: 'PISTOL', icon: '🔫' },
+  { value: 'eco',    label: 'ECO',    icon: '🐭' },
+  { value: 'force',  label: 'FORCE',  icon: '⚡' },
+  { value: 'full',   label: 'FULL',   icon: '💰' }
+],
       newMapInput: ''
     }
   },
   computed: {
   filteredStrats() {
     let result = this.strats.filter(s => {
-      const matchMap = s.map === this.activeMap;
-      const matchSide = this.fSide === 'all' || s.side === this.fSide;
-      const matchSite = this.fSite === 'all' || (s.site || 'Any') === this.fSite;
-      
-      const matchSearch = !this.searchQuery || 
-        (s.name && s.name.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
-        (s.description && s.description.toLowerCase().includes(this.searchQuery.toLowerCase()));
-      
-      return matchMap && matchSide && matchSite && matchSearch;
-    });
+    const matchMap = s.map === this.activeMap;
+    const matchSide = this.fSide === 'all' || s.side === this.fSide;
+    const matchSite = this.fSite === 'all' || (s.site || 'Any') === this.fSite;
+    const matchRound = this.roundFilter === 'all' || s.roundType === this.roundFilter;
+    
+    const matchSearch = !this.searchQuery || 
+      (s.name && s.name.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
+      (s.description && s.description.toLowerCase().includes(this.searchQuery.toLowerCase()));
+    
+    return matchMap && matchSide && matchSite && matchRound && matchSearch;
+  });
 
-    if (this.favoriteMode) {
-      result = result.filter(s => s.favorite);
-    }
-    return result;
-  },
+  if (this.favoriteMode) {
+    result = result.filter(s => s.favorite);
+  }
+  return result;
+},
 
   favoriteStrats() {
     return this.strats.filter(s => s.favorite === true);
@@ -1040,6 +1054,7 @@ body, html {
   position: relative;
   min-width: 320px;
   max-width: 420px;
+  min-width: 280px;
 }
 
 .hud-search-input {
@@ -1083,8 +1098,58 @@ body, html {
     align-items: flex-end;
   }
   
-  .search-input-wrapper {
-    min-width: 280px;
-  }
+}
+/* === ROUND FILTER IN HEADER === */
+.round-filter .f-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  padding: 8px 14px;
+}
+
+.round-filter .f-pill.round.pistol.active { background: #8b5cf6; color: white; }
+.round-filter .f-pill.round.eco.active    { background: #eab308; color: #000; }
+.round-filter .f-pill.round.force.active  { background: #f97316; color: white; }
+.round-filter .f-pill.round.full.active   { background: #22c55e; color: white; }
+
+/* === ROUND SWITCH IN FORM === */
+.round-type-switch {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 12px;
+}
+
+.round-type-switch button {
+  padding: 16px 12px;
+  background: var(--panel);
+  border: 2px solid var(--border);
+  color: var(--muted);
+  border-radius: 14px;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.25s ease;
+}
+
+.round-type-switch button:hover:not(.active) {
+  border-color: var(--accent);
+  color: var(--text);
+  transform: translateY(-2px);
+}
+
+.round-type-switch button .rt-icon {
+  font-size: 18px;
+}
+
+.round-type-switch button.active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: white;
+  box-shadow: 0 0 20px rgba(0, 209, 255, 0.3);
 }
 </style>
