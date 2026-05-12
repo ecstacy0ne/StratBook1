@@ -1,0 +1,729 @@
+<template>
+  <div class="form-overlay" @click.self="$emit('close')">
+    <div class="protocol-card">
+      <!-- Header -->
+      <header class="protocol-header">
+        <div class="h-text">
+          <span class="protocol-id">TACTICAL INITIALIZATION</span>
+          <h2>SECTOR: <span class="accent">{{ activeMap }}</span></h2>
+        </div>
+        <button @click="$emit('close')" class="btn-protocol-close">✕</button>
+      </header>
+
+      <!-- Основное содержимое -->
+      <div class="protocol-body">
+        <div class="protocol-grid">
+          <!-- Левая колонка -->
+          <div class="grid-left">
+            <div class="input-field">
+              <label>STRATEGY DESIGNATION <span class="required">*</span></label>
+              <input v-model="form.name" class="hud-input-dark" placeholder="e.g. MIRAGE FAST A-SITE SMOKES" maxlength="100">
+            </div>
+            
+            <div class="input-field">
+              <label>SEQUENTIAL INSTRUCTIONS</label>
+              <textarea v-model="form.description" class="hud-input-dark" rows="8" placeholder="Enter tactical steps...&#10;&#10;Step 1: Smoke CT spawn"></textarea>
+            </div>
+
+            <div class="input-field">
+              <label>DIGITAL FOOTAGE (URL)</label>
+              <input v-model="form.videoUrl" class="hud-input-dark" placeholder="https://youtube.com/...">
+            </div>
+
+            <!-- HASHTAGS -->
+            <div class="input-field">
+              <label>HASHTAGS <span class="field-hint">(Separated by commas)</span></label>
+              <input 
+                v-model="hashtagInput"
+                @keyup.enter="addHashtag"
+                @blur="addHashtag"
+                class="hud-input-dark" 
+                placeholder="#fastexec, #smokes, #a-rush..."
+              >
+              <div class="hashtag-list">
+                <span 
+                  v-for="(tag, i) in form.hashtags" 
+                  :key="i"
+                  class="hashtag-pill"
+                  @click="removeHashtag(i)"
+                >
+                  #{{ tag }} ✕
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Правая колонка -->
+          <div class="grid-right">
+            <div class="input-field">
+              <label>TEAM SIDE <span class="required">*</span></label>
+              <div class="switch-group">
+                <button @click="form.side = 't'" :class="{ active: form.side === 't' }" class="btn-side t">⚔️ T SIDE</button>
+                <button @click="form.side = 'ct'" :class="{ active: form.side === 'ct' }" class="btn-side ct">🛡️ CT SIDE</button>
+              </div>
+            </div>
+
+            <div class="input-field">
+              <label>ROUND TYPE <span class="required">*</span></label>
+              <div class="round-type-switch">
+                <button v-for="rt in roundTypes" :key="rt.value" @click="form.roundType = rt.value" :class="{ active: form.roundType === rt.value }">
+                  <span class="rt-icon">{{ rt.icon }}</span> {{ rt.label }}
+                </button>
+              </div>
+            </div>
+
+            <div class="input-field">
+              <label>TARGET SECTOR</label>
+              <div class="site-switch">
+                <button v-for="s in sites" :key="s.value" @click="form.site = s.value" :class="{ active: form.site === s.value }">{{ s.label }}</button>
+              </div>
+            </div>
+
+            <div class="input-field">
+              <label>UTILITY ALLOCATION</label>
+              <div class="utility-setup">
+                <div class="u-row" v-for="util in utilities" :key="util.key">
+                  <span class="u-icon">{{ util.icon }}</span>
+                  <div class="u-control">
+                    <button @click="decrementUtility(util.key)" class="u-btn" :disabled="form.utility[util.key] <= 0">-</button>
+                    <input type="number" v-model.number="form.utility[util.key]" min="0" max="5" class="u-input">
+                    <button @click="incrementUtility(util.key)" class="u-btn" :disabled="form.utility[util.key] >= 5">+</button>
+                  </div>
+                  <span class="u-label">{{ util.label }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Футер -->
+      <footer class="protocol-footer">
+        <div class="footer-actions">
+          <button @click="$emit('close')" class="btn-protocol-cancel">ABORT MISSION</button>
+          <button @click="handleDeploy" class="btn-protocol-submit" :disabled="!isFormValid">
+            {{ isFormValid ? 'DEPLOY TO REGISTRY' : 'FILL REQUIRED FIELDS' }}
+          </button>
+        </div>
+        <div v-if="!isFormValid" class="form-error-summary">
+          Please fill in all required fields marked with *
+        </div>
+      </footer>
+    </div>
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'StratForm',
+  props: { activeMap: { type: String, required: true } },
+  emits: ['submit', 'close'],
+
+  data() {
+    return {
+      form: {
+        name: '',
+        description: '',
+        videoUrl: '',
+        hashtagInput: '',
+        side: 't',
+        site: 'A',
+        roundType: 'full',
+        utility: { smokes: 0, mollys: 0, flashes: 0, he: 0 },
+        hashtags: []
+      },
+      nameError: '',
+      urlError: '',
+      sites: [
+        { value: 'A', label: 'A' },
+        { value: 'B', label: 'B' },
+        { value: 'Mid', label: 'MID' },
+        { value: 'Any', label: 'ANY' }
+      ],
+      roundTypes: [
+        { value: 'pistol', label: 'Pistol', icon: '🔫' },
+        { value: 'eco',    label: 'Eco',    icon: '🐭' },
+        { value: 'force',  label: 'Force',  icon: '⚡' },
+        { value: 'full',   label: 'Full Buy', icon: '💰' }
+      ],
+      utilities: [
+        { key: 'smokes', icon: '☁️', label: 'Smokes' },
+        { key: 'mollys', icon: '🔥', label: 'Mollys' },
+        { key: 'flashes', icon: '✨', label: 'Flashes' },
+        { key: 'he',      icon: '💣', label: 'HE' }
+      ]
+    }
+  },
+
+  computed: {
+    isFormValid() {
+      return this.form.name.trim().length >= 3 && !this.nameError;
+    }
+  },
+
+  methods: {
+    validateName() {
+      const name = this.form.name.trim();
+      if (name.length > 0 && name.length < 3) {
+        this.nameError = 'Minimum 3 characters';
+      } else {
+        this.nameError = '';
+      }
+    },
+    validateUrl() { /* ... */ },
+    incrementUtility(key) {
+      if (this.form.utility[key] < 5) this.form.utility[key]++;
+    },
+    decrementUtility(key) {
+      if (this.form.utility[key] > 0) this.form.utility[key]--;
+    },
+    handleDeploy() {
+      this.validateName();
+      if (!this.isFormValid) return;
+
+      this.$emit('submit', { ...this.form });
+      this.resetForm();
+    },
+    addHashtag() {
+  const input = this.hashtagInput.trim();
+  if (!input) return;
+
+  const tags = input.split(',').map(t => 
+    t.trim().replace(/^#/, '').toLowerCase()
+  ).filter(t => t.length > 0);
+
+  tags.forEach(tag => {
+    if (!this.form.hashtags.includes(tag)) {
+      this.form.hashtags.push(tag);
+    }
+  });
+
+  this.hashtagInput = '';
+},
+
+removeHashtag(index) {
+  this.form.hashtags.splice(index, 1);
+},
+    resetForm() {
+      this.form = {
+        name: '', description: '', videoUrl: '', side: 't', site: 'A',
+        roundType: 'full',
+        utility: { smokes: 0, mollys: 0, flashes: 0, he: 0 },
+        hashtags: []
+      };
+      this.nameError = '';
+      this.urlError = '';
+    }
+  }
+}
+</script>
+
+<style scoped>
+.form-overlay { 
+  position: fixed; 
+  inset: 0; 
+  background: var(--overlay); 
+  backdrop-filter: blur(12px); 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  z-index: 1000; 
+  padding: 25px; 
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.protocol-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 32px;
+  width: 100%;
+  max-width: 920px;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 40px 100px rgba(0,0,0,0.6);
+}
+
+@keyframes slideUp {
+  from { transform: translateY(30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.protocol-card::-webkit-scrollbar {
+  width: 8px;
+}
+
+.protocol-card::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.protocol-card::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+.protocol-header { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: flex-start;
+  padding: 40px 50px 30px; 
+  border-bottom: 1px solid var(--border); 
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  z-index: 10;
+  border-radius: 32px 32px 0 0;
+}
+
+.protocol-id { 
+  font-size: 10px; 
+  font-weight: 900; 
+  color: var(--muted); 
+  letter-spacing: 2.5px; 
+  display: block; 
+  margin-bottom: 8px; 
+}
+
+.accent { 
+  color: var(--accent); 
+}
+
+.btn-protocol-close { 
+  background: none; 
+  border: none; 
+  color: var(--text); 
+  font-size: 28px; 
+  cursor: pointer; 
+  opacity: 0.4; 
+  transition: all 0.2s ease; 
+  padding: 5px 10px;
+  border-radius: 8px;
+}
+
+.btn-protocol-close:hover { 
+  opacity: 1; 
+  transform: scale(1.1);
+  background: var(--panel);
+}
+
+.protocol-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 45px 50px;
+}
+
+.protocol-grid { 
+  display: grid; 
+  grid-template-columns: 1.2fr 0.8fr; 
+  gap: 50px; 
+}
+
+.input-field {
+  margin-bottom: 35px;
+}
+
+.input-field:last-child {
+  margin-bottom: 0;
+}
+
+label { 
+  display: block; 
+  font-size: 11px; 
+  font-weight: 900; 
+  color: var(--muted); 
+  margin-bottom: 15px; 
+  letter-spacing: 1px; 
+}
+
+.required {
+  color: #ef4444;
+  margin-left: 2px;
+}
+
+.hud-input-dark { 
+  background: var(--input); 
+  border: 1px solid var(--border); 
+  color: var(--text); 
+  padding: 18px; 
+  border-radius: 16px; 
+  width: 100%; 
+  outline: none; 
+  transition: all 0.2s ease; 
+  font-size: 15px; 
+  font-family: inherit;
+  resize: vertical;
+}
+
+.hud-input-dark:focus { 
+  border-color: var(--accent); 
+  box-shadow: 0 0 15px rgba(0, 209, 255, 0.1); 
+}
+
+.hud-input-dark::placeholder {
+  color: var(--muted);
+  opacity: 0.5;
+}
+
+.field-error {
+  display: block;
+  color: #ef4444;
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 8px;
+  padding-left: 5px;
+}
+
+.field-hint {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 8px;
+  padding-left: 5px;
+}
+
+.field-success {
+  display: block;
+  color: #10b981;
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 8px;
+  padding-left: 5px;
+}
+
+/* SWITCH GROUP */
+.switch-group { 
+  display: flex; 
+  gap: 12px; 
+}
+
+.btn-side { 
+  flex: 1; 
+  padding: 16px; 
+  background: var(--panel); 
+  border: 2px solid var(--border); 
+  color: var(--muted); 
+  border-radius: 14px; 
+  cursor: pointer; 
+  font-size: 12px; 
+  font-weight: 900; 
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.side-icon {
+  font-size: 16px;
+}
+
+.btn-side:hover:not(.active) {
+  border-color: var(--text);
+  color: var(--text);
+}
+
+.btn-side.t.active { 
+  border-color: var(--t-color); 
+  color: var(--t-color); 
+  background: rgba(255, 160, 0, 0.1);
+  box-shadow: 0 0 20px rgba(255, 160, 0, 0.2);
+}
+
+.btn-side.ct.active { 
+  border-color: var(--ct-color); 
+  color: var(--ct-color); 
+  background: rgba(0, 162, 255, 0.1);
+  box-shadow: 0 0 20px rgba(0, 162, 255, 0.2);
+}
+
+/* SITE SWITCH */
+.site-switch { 
+  display: grid; 
+  grid-template-columns: 1fr 1fr; 
+  gap: 12px; 
+}
+
+.site-switch button { 
+  padding: 16px; 
+  background: var(--panel); 
+  border: 2px solid var(--border); 
+  color: var(--muted); 
+  border-radius: 14px; 
+  cursor: pointer; 
+  font-size: 13px; 
+  font-weight: 900; 
+  transition: all 0.2s ease;
+}
+
+.site-switch button:hover:not(.active) {
+  border-color: var(--text);
+  color: var(--text);
+}
+
+.site-switch button.active { 
+  background: var(--accent); 
+  color: #fff; 
+  border-color: var(--accent);
+  box-shadow: 0 0 20px rgba(0, 209, 255, 0.3); 
+}
+
+/* UTILITY SETUP */
+.utility-setup { 
+  display: flex; 
+  flex-direction: column;
+  gap: 15px;
+}
+
+.u-row { 
+  display: flex; 
+  align-items: center; 
+  gap: 12px;
+  padding: 12px;
+  background: var(--panel);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.u-icon {
+  font-size: 20px;
+  width: 30px;
+  text-align: center;
+}
+
+.u-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.u-btn {
+  width: 30px;
+  height: 30px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.u-btn:hover:not(:disabled) {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.u-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.u-input {
+  width: 50px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px;
+  border-radius: 8px;
+  text-align: center;
+  font-weight: 900;
+  font-family: monospace;
+  font-size: 16px;
+  outline: none;
+}
+
+.u-input:focus {
+  border-color: var(--accent);
+}
+
+.u-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  min-width: 60px;
+}
+
+.utility-total {
+  margin-top: 15px;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--accent);
+  padding: 8px 12px;
+  background: var(--panel);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+/* FOOTER */
+.protocol-footer {
+  padding: 30px 50px 40px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+
+.footer-actions {
+  display: flex;
+  gap: 15px;
+}
+
+.btn-protocol-cancel {
+  flex: 0.3;
+  padding: 18px;
+  background: var(--panel);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-weight: 900;
+  cursor: pointer;
+  font-size: 12px;
+  letter-spacing: 1px;
+  transition: all 0.2s ease;
+}
+
+.btn-protocol-cancel:hover {
+  color: #ef4444;
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.btn-protocol-submit { 
+  flex: 1;
+  padding: 18px 24px; 
+  background: var(--accent); 
+  color: #fff; 
+  border: none; 
+  border-radius: 20px; 
+  font-weight: 900; 
+  cursor: pointer; 
+  font-size: 15px; 
+  letter-spacing: 1.5px; 
+  box-shadow: 0 10px 30px rgba(0, 209, 255, 0.3);
+  transition: all 0.2s ease;
+}
+
+.btn-protocol-submit:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 40px rgba(0, 209, 255, 0.4);
+}
+
+.btn-protocol-submit:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: grayscale(0.5);
+}
+
+.form-error-summary {
+  margin-top: 15px;
+  text-align: center;
+  color: #ef4444;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.protocol-grid { 
+  display: grid; 
+  grid-template-columns: 1.2fr 0.8fr; 
+  gap: 50px; 
+}
+
+/* Адаптив для формы */
+@media (max-width: 900px) {
+  .protocol-card {
+    max-width: 100%;
+    margin: 10px;
+    max-height: 95vh;
+  }
+
+  .protocol-header,
+  .protocol-body,
+  .protocol-footer {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .protocol-body {
+    padding-top: 30px;
+    padding-bottom: 30px;
+  }
+
+  .protocol-grid {
+    grid-template-columns: 1fr !important;
+    gap: 35px;
+  }
+
+  .input-field {
+    margin-bottom: 28px;
+  }
+
+  .round-type-switch,
+  .site-switch {
+    grid-template-columns: 1fr;
+  }
+
+  .switch-group {
+    flex-direction: column;
+  }
+
+  .btn-protocol-submit,
+  .btn-protocol-cancel {
+    padding: 16px;
+    font-size: 14px;
+  }
+}
+.round-type-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.round-type-switch button {
+  flex: 1;
+  min-width: 110px;
+  padding: 14px 12px;
+  background: var(--panel);
+  border: 2px solid var(--border);
+  color: var(--muted);
+  border-radius: 14px;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.25s ease;
+}
+
+.round-type-switch button:hover:not(.active) {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.round-type-switch button.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+  box-shadow: 0 0 20px rgba(0, 209, 255, 0.4);
+}
+
+.rt-icon {
+  font-size: 18px;
+}
+
+</style>
