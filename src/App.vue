@@ -62,6 +62,19 @@
     </div>
   </div>
 </header>
+        <div class="nav-left">
+          <div class="version-tag">SYSTEM v3.4 // READY</div>
+        </div>
+        
+        <div class="nav-right">
+          <button @click="toggleTheme" class="btn-toggle-hud">
+            {{ theme === 'dark' ? '☀️ LIGHT HUD' : '🌙 DARK HUD' }}
+          </button>
+          <div class="status-badge">
+            <span class="s-label">DATABASE UNITS:</span>
+            <span class="s-value">{{ filteredStrats.length }}</span>
+          </div>
+        </div>
       <section v-if="view === 'library'" class="main-view">
         <div class="content-header">
   <h2 class="active-sector-title">{{ activeMap || 'OFFLINE' }}</h2>
@@ -207,10 +220,12 @@ export default {
       fSide: 'all',
       fSite: 'all',
       sidebarOpen: false,
+      sidebarOpen: false,
       favoriteMode: false,
       showSearch: false,
       searchQuery: '',
       roundFilter: 'all',
+      hashtagFilter: '',
       hashtagFilter: '',
       roundTypes: [
   { value: 'all',    label: 'ALL',    icon: '🔄' },
@@ -241,7 +256,7 @@ export default {
   ));
 
 return matchMap && matchSide && matchSite && matchRound && matchSearch && matchHashtag;
-    
+
   });
 
   if (this.favoriteMode) {
@@ -267,7 +282,7 @@ return matchMap && matchSide && matchSite && matchRound && matchSearch && matchH
       this.theme = this.theme === 'dark' ? 'light' : 'dark';
       localStorage.setItem(THEME_KEY, this.theme);
     },
-    
+
     toggleFavorite(id) {
       const strat = this.strats.find(s => s.id === id);
       if (strat) {
