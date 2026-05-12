@@ -9,6 +9,7 @@
         </div>
         <button @click="$emit('close')" class="btn-protocol-close">✕</button>
       </header>
+
       <!-- Основное содержимое -->
       <div class="protocol-body">
         <div class="protocol-grid">
@@ -17,12 +18,10 @@
             <div class="input-field">
               <label>STRATEGY DESIGNATION <span class="required">*</span></label>
               <input v-model="form.name" class="hud-input-dark" placeholder="e.g. MIRAGE FAST A-SITE SMOKES" maxlength="100">
-              <input v-model="form.name" class="hud-input-dark" placeholder="e.g. MIRAGE FAST A-SITE SMOKES" maxlength="100">
             </div>
             
             <div class="input-field">
               <label>SEQUENTIAL INSTRUCTIONS</label>
-              <textarea v-model="form.description" class="hud-input-dark" rows="8" placeholder="Enter tactical steps...&#10;&#10;Step 1: Smoke CT spawn"></textarea>
               <textarea v-model="form.description" class="hud-input-dark" rows="8" placeholder="Enter tactical steps...&#10;&#10;Step 1: Smoke CT spawn"></textarea>
             </div>
 
@@ -51,14 +50,6 @@
                   #{{ tag }} ✕
                 </span>
               </div>
-              <input 
-                v-model="form.videoUrl" 
-                class="hud-input-dark" 
-                placeholder="https://youtube.com/..."
-                type="url"
-                @blur="validateUrl"
-              >
-              <span v-if="urlError" class="field-error">{{ urlError }}</span>
             </div>
           </div>
 
@@ -75,68 +66,19 @@
             <div class="input-field">
               <label>ROUND TYPE <span class="required">*</span></label>
               <div class="round-type-switch">
-                <button v-for="rt in roundTypes" :key="rt.value" @click="form.roundType = rt.value" :class="{ active: form.roundType === rt.value }"></button>
+                <button v-for="rt in roundTypes" :key="rt.value" @click="form.roundType = rt.value" :class="{ active: form.roundType === rt.value }">
                   <span class="rt-icon">{{ rt.icon }}</span> {{ rt.label }}
-            <!-- TEAM SIDE -->
-            <div class="input-field">
-              <label>TEAM SIDE <span class="required">*</span></label>
-              <div class="switch-group">
-                <button 
-                  @click="form.side = 't'" 
-                  :class="{ active: form.side === 't' }" 
-                  class="btn-side t"
-                  type="button"
-                >
-                  ⚔️ T SIDE
-                </button>
-                <button 
-                  @click="form.side = 'ct'" 
-                  :class="{ active: form.side === 'ct' }" 
-                  class="btn-side ct"
-                  type="button"
-                >
-                  🛡️ CT SIDE
                 </button>
               </div>
             </div>
+
             <div class="input-field">
               <label>TARGET SECTOR</label>
               <div class="site-switch">
                 <button v-for="s in sites" :key="s.value" @click="form.site = s.value" :class="{ active: form.site === s.value }">{{ s.label }}</button>
               </div>
             </div>
-            <!-- ROUND TYPE -->
-            <div class="input-field">
-              <label>ROUND TYPE <span class="required">*</span></label>
-              <div class="round-type-switch">
-                <button 
-                  v-for="rt in roundTypes" 
-                  :key="rt.value"
-                  @click="form.roundType = rt.value"
-                  :class="{ active: form.roundType === rt.value }"
-                  type="button"
-                >
-                  <span class="rt-icon">{{ rt.icon }}</span>
-                  {{ rt.label }}
-                </button>
-              </div>
-            </div>
 
-            <!-- TARGET SECTOR -->
-            <div class="input-field">
-              <label>TARGET SECTOR</label>
-              <div class="site-switch">
-                <button 
-                  v-for="s in sites" 
-                  :key="s.value" 
-                  @click="form.site = s.value" 
-                  :class="{ active: form.site === s.value }"
-                  type="button"
-                >
-                  {{ s.label }}
-                </button>
-              </div>
-            </div>
             <div class="input-field">
               <label>UTILITY ALLOCATION</label>
               <div class="utility-setup">
@@ -154,6 +96,8 @@
           </div>
         </div>
       </div>
+
+      <!-- Футер -->
       <footer class="protocol-footer">
         <div class="footer-actions">
           <button @click="$emit('close')" class="btn-protocol-cancel">ABORT MISSION</button>
@@ -167,8 +111,6 @@
       </footer>
     </div>
   </div>
- </div>
-</div> 
 </template>
 
 <script>
@@ -294,6 +236,7 @@ removeHashtag(index) {
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
 .protocol-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -368,6 +311,7 @@ removeHashtag(index) {
   transform: scale(1.1);
   background: var(--panel);
 }
+
 .protocol-body {
   flex: 1;
   overflow-y: auto;
@@ -691,12 +635,20 @@ label {
   font-weight: 700;
   letter-spacing: 0.5px;
 }
+
 .protocol-grid { 
   display: grid; 
   grid-template-columns: 1.2fr 0.8fr; 
   gap: 50px; 
 }
 
+/* Адаптив для формы */
+@media (max-width: 900px) {
+  .protocol-card {
+    max-width: 100%;
+    margin: 10px;
+    max-height: 95vh;
+  }
 
   .protocol-header,
   .protocol-body,
@@ -732,33 +684,6 @@ label {
   .btn-protocol-cancel {
     padding: 16px;
     font-size: 14px;
-@media (max-width: 768px) {
-  .form-overlay {
-    padding: 10px;
-  }
-  
-  .protocol-header,
-  .protocol-body,
-  .protocol-footer {
-    padding-left: 25px;
-    padding-right: 25px;
-  }
-  
-  .protocol-grid {
-    grid-template-columns: 1fr;
-    gap: 0;
-  }
-  
-  .footer-actions {
-    flex-direction: column;
-  }
-  
-  .btn-protocol-cancel {
-    order: 2;
-  }
-  
-  .btn-protocol-submit {
-    order: 1;
   }
 }
 .round-type-switch {
@@ -800,5 +725,5 @@ label {
 .rt-icon {
   font-size: 18px;
 }
-  }
+
 </style>

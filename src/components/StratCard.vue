@@ -43,10 +43,6 @@
           ANALYZE DATA STREAM
         </a>
       </div>
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
->>>>>>> 6846d4a05c9b0b188b92e08a27f95b6daa118c7d
       <div class="hashtags" v-if="strat.hashtags && strat.hashtags.length">
   <span 
     v-for="tag in strat.hashtags" 
@@ -56,11 +52,6 @@
     #{{ tag }}
   </span>
 </div>
-<<<<<<< HEAD
-=======
-=======
->>>>>>> c4c0012bfd5f6176850d00cfc42b998809d0c9ec
->>>>>>> 6846d4a05c9b0b188b92e08a27f95b6daa118c7d
 
       <footer class="card-footer">
   <span class="entry-date">{{ formattedDate }}</span>

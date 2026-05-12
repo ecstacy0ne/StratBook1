@@ -39,6 +39,7 @@ export default {
   computed: {
     mapInitial() {
       if (!this.map) return '?';
+
       const words = this.map.trim().split(/\s+/);
       if (words.length === 1) {
         return this.map.charAt(0).toUpperCase();
