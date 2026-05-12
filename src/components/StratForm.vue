@@ -1,7 +1,10 @@
 <template>
   <div class="form-overlay" @click.self="$emit('close')">
     <div class="protocol-card">
+<<<<<<< HEAD
       <!-- Header -->
+=======
+>>>>>>> c4c0012bfd5f6176850d00cfc42b998809d0c9ec
       <header class="protocol-header">
         <div class="h-text">
           <span class="protocol-id">TACTICAL INITIALIZATION</span>
@@ -10,23 +13,48 @@
         <button @click="$emit('close')" class="btn-protocol-close">✕</button>
       </header>
 
+<<<<<<< HEAD
       <!-- Основное содержимое -->
+=======
+>>>>>>> c4c0012bfd5f6176850d00cfc42b998809d0c9ec
       <div class="protocol-body">
         <div class="protocol-grid">
           <!-- Левая колонка -->
           <div class="grid-left">
             <div class="input-field">
               <label>STRATEGY DESIGNATION <span class="required">*</span></label>
+<<<<<<< HEAD
               <input v-model="form.name" class="hud-input-dark" placeholder="e.g. MIRAGE FAST A-SITE SMOKES" maxlength="100">
+=======
+              <input 
+                v-model="form.name" 
+                class="hud-input-dark" 
+                placeholder="e.g. MIRAGE FAST A-SITE SMOKES"
+                maxlength="100"
+                @input="validateName"
+              >
+              <span v-if="nameError" class="field-error">{{ nameError }}</span>
+>>>>>>> c4c0012bfd5f6176850d00cfc42b998809d0c9ec
             </div>
             
             <div class="input-field">
               <label>SEQUENTIAL INSTRUCTIONS</label>
+<<<<<<< HEAD
               <textarea v-model="form.description" class="hud-input-dark" rows="8" placeholder="Enter tactical steps...&#10;&#10;Step 1: Smoke CT spawn"></textarea>
+=======
+              <textarea 
+                v-model="form.description" 
+                class="hud-input-dark" 
+                rows="8" 
+                placeholder="Enter tactical steps...&#10;&#10;Step 1: Smoke CT spawn&#10;Step 2: Flash A site..."
+                maxlength="2000"
+              ></textarea>
+>>>>>>> c4c0012bfd5f6176850d00cfc42b998809d0c9ec
             </div>
 
             <div class="input-field">
               <label>DIGITAL FOOTAGE (URL)</label>
+<<<<<<< HEAD
               <input v-model="form.videoUrl" class="hud-input-dark" placeholder="https://youtube.com/...">
             </div>
 
@@ -50,11 +78,22 @@
                   #{{ tag }} ✕
                 </span>
               </div>
+=======
+              <input 
+                v-model="form.videoUrl" 
+                class="hud-input-dark" 
+                placeholder="https://youtube.com/..."
+                type="url"
+                @blur="validateUrl"
+              >
+              <span v-if="urlError" class="field-error">{{ urlError }}</span>
+>>>>>>> c4c0012bfd5f6176850d00cfc42b998809d0c9ec
             </div>
           </div>
 
           <!-- Правая колонка -->
           <div class="grid-right">
+<<<<<<< HEAD
             <div class="input-field">
               <label>TEAM SIDE <span class="required">*</span></label>
               <div class="switch-group">
@@ -68,10 +107,32 @@
               <div class="round-type-switch">
                 <button v-for="rt in roundTypes" :key="rt.value" @click="form.roundType = rt.value" :class="{ active: form.roundType === rt.value }">
                   <span class="rt-icon">{{ rt.icon }}</span> {{ rt.label }}
+=======
+            <!-- TEAM SIDE -->
+            <div class="input-field">
+              <label>TEAM SIDE <span class="required">*</span></label>
+              <div class="switch-group">
+                <button 
+                  @click="form.side = 't'" 
+                  :class="{ active: form.side === 't' }" 
+                  class="btn-side t"
+                  type="button"
+                >
+                  ⚔️ T SIDE
+                </button>
+                <button 
+                  @click="form.side = 'ct'" 
+                  :class="{ active: form.side === 'ct' }" 
+                  class="btn-side ct"
+                  type="button"
+                >
+                  🛡️ CT SIDE
+>>>>>>> c4c0012bfd5f6176850d00cfc42b998809d0c9ec
                 </button>
               </div>
             </div>
 
+<<<<<<< HEAD
             <div class="input-field">
               <label>TARGET SECTOR</label>
               <div class="site-switch">
@@ -79,6 +140,42 @@
               </div>
             </div>
 
+=======
+            <!-- ROUND TYPE -->
+            <div class="input-field">
+              <label>ROUND TYPE <span class="required">*</span></label>
+              <div class="round-type-switch">
+                <button 
+                  v-for="rt in roundTypes" 
+                  :key="rt.value"
+                  @click="form.roundType = rt.value"
+                  :class="{ active: form.roundType === rt.value }"
+                  type="button"
+                >
+                  <span class="rt-icon">{{ rt.icon }}</span>
+                  {{ rt.label }}
+                </button>
+              </div>
+            </div>
+
+            <!-- TARGET SECTOR -->
+            <div class="input-field">
+              <label>TARGET SECTOR</label>
+              <div class="site-switch">
+                <button 
+                  v-for="s in sites" 
+                  :key="s.value" 
+                  @click="form.site = s.value" 
+                  :class="{ active: form.site === s.value }"
+                  type="button"
+                >
+                  {{ s.label }}
+                </button>
+              </div>
+            </div>
+
+            <!-- UTILITY -->
+>>>>>>> c4c0012bfd5f6176850d00cfc42b998809d0c9ec
             <div class="input-field">
               <label>UTILITY ALLOCATION</label>
               <div class="utility-setup">
@@ -97,7 +194,10 @@
         </div>
       </div>
 
+<<<<<<< HEAD
       <!-- Футер -->
+=======
+>>>>>>> c4c0012bfd5f6176850d00cfc42b998809d0c9ec
       <footer class="protocol-footer">
         <div class="footer-actions">
           <button @click="$emit('close')" class="btn-protocol-cancel">ABORT MISSION</button>
@@ -125,12 +225,19 @@ export default {
         name: '',
         description: '',
         videoUrl: '',
+<<<<<<< HEAD
         hashtagInput: '',
         side: 't',
         site: 'A',
         roundType: 'full',
         utility: { smokes: 0, mollys: 0, flashes: 0, he: 0 },
         hashtags: []
+=======
+        side: 't',
+        site: 'A',
+        roundType: 'full',
+        utility: { smokes: 0, mollys: 0, flashes: 0 }
+>>>>>>> c4c0012bfd5f6176850d00cfc42b998809d0c9ec
       },
       nameError: '',
       urlError: '',
@@ -149,8 +256,12 @@ export default {
       utilities: [
         { key: 'smokes', icon: '☁️', label: 'Smokes' },
         { key: 'mollys', icon: '🔥', label: 'Mollys' },
+<<<<<<< HEAD
         { key: 'flashes', icon: '✨', label: 'Flashes' },
         { key: 'he',      icon: '💣', label: 'HE' }
+=======
+        { key: 'flashes', icon: '✨', label: 'Flashes' }
+>>>>>>> c4c0012bfd5f6176850d00cfc42b998809d0c9ec
       ]
     }
   },
@@ -184,6 +295,7 @@ export default {
       this.$emit('submit', { ...this.form });
       this.resetForm();
     },
+<<<<<<< HEAD
     addHashtag() {
   const input = this.hashtagInput.trim();
   if (!input) return;
@@ -204,12 +316,18 @@ export default {
 removeHashtag(index) {
   this.form.hashtags.splice(index, 1);
 },
+=======
+>>>>>>> c4c0012bfd5f6176850d00cfc42b998809d0c9ec
     resetForm() {
       this.form = {
         name: '', description: '', videoUrl: '', side: 't', site: 'A',
         roundType: 'full',
+<<<<<<< HEAD
         utility: { smokes: 0, mollys: 0, flashes: 0, he: 0 },
         hashtags: []
+=======
+        utility: { smokes: 0, mollys: 0, flashes: 0 }
+>>>>>>> c4c0012bfd5f6176850d00cfc42b998809d0c9ec
       };
       this.nameError = '';
       this.urlError = '';
@@ -237,6 +355,7 @@ removeHashtag(index) {
   to { opacity: 1; }
 }
 
+<<<<<<< HEAD
 .protocol-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -248,6 +367,18 @@ removeHashtag(index) {
   flex-direction: column;
   overflow: hidden;
   box-shadow: 0 40px 100px rgba(0,0,0,0.6);
+=======
+.protocol-card { 
+  background: var(--surface); 
+  border: 1px solid var(--border); 
+  border-radius: 32px; 
+  width: 100%; 
+  max-width: 900px; 
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 40px 100px rgba(0,0,0,0.6); 
+  animation: slideUp 0.3s ease;
+>>>>>>> c4c0012bfd5f6176850d00cfc42b998809d0c9ec
 }
 
 @keyframes slideUp {
@@ -312,10 +443,15 @@ removeHashtag(index) {
   background: var(--panel);
 }
 
+<<<<<<< HEAD
 .protocol-body {
   flex: 1;
   overflow-y: auto;
   padding: 45px 50px;
+=======
+.protocol-body { 
+  padding: 45px 50px; 
+>>>>>>> c4c0012bfd5f6176850d00cfc42b998809d0c9ec
 }
 
 .protocol-grid { 
@@ -569,11 +705,21 @@ label {
 }
 
 /* FOOTER */
+<<<<<<< HEAD
 .protocol-footer {
   padding: 30px 50px 40px;
   border-top: 1px solid var(--border);
   background: var(--surface);
   flex-shrink: 0;
+=======
+.protocol-footer { 
+  padding: 30px 50px 40px; 
+  border-top: 1px solid var(--border);
+  position: sticky;
+  bottom: 0;
+  background: var(--surface);
+  border-radius: 0 0 32px 32px;
+>>>>>>> c4c0012bfd5f6176850d00cfc42b998809d0c9ec
 }
 
 .footer-actions {
@@ -636,6 +782,7 @@ label {
   letter-spacing: 0.5px;
 }
 
+<<<<<<< HEAD
 .protocol-grid { 
   display: grid; 
   grid-template-columns: 1.2fr 0.8fr; 
@@ -684,6 +831,36 @@ label {
   .btn-protocol-cancel {
     padding: 16px;
     font-size: 14px;
+=======
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .form-overlay {
+    padding: 10px;
+  }
+  
+  .protocol-header,
+  .protocol-body,
+  .protocol-footer {
+    padding-left: 25px;
+    padding-right: 25px;
+  }
+  
+  .protocol-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  
+  .footer-actions {
+    flex-direction: column;
+  }
+  
+  .btn-protocol-cancel {
+    order: 2;
+  }
+  
+  .btn-protocol-submit {
+    order: 1;
+>>>>>>> c4c0012bfd5f6176850d00cfc42b998809d0c9ec
   }
 }
 .round-type-switch {
@@ -725,5 +902,8 @@ label {
 .rt-icon {
   font-size: 18px;
 }
+<<<<<<< HEAD
 
+=======
+>>>>>>> c4c0012bfd5f6176850d00cfc42b998809d0c9ec
 </style>

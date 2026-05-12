@@ -39,7 +39,12 @@ export default {
   computed: {
     mapInitial() {
       if (!this.map) return '?';
+<<<<<<< HEAD
 
+=======
+      // Берем первую букву, если map состоит из одного слова
+      // Или первые буквы каждого слова, если слов несколько
+>>>>>>> c4c0012bfd5f6176850d00cfc42b998809d0c9ec
       const words = this.map.trim().split(/\s+/);
       if (words.length === 1) {
         return this.map.charAt(0).toUpperCase();

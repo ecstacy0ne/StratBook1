@@ -43,6 +43,7 @@
           ANALYZE DATA STREAM
         </a>
       </div>
+<<<<<<< HEAD
       <div class="hashtags" v-if="strat.hashtags && strat.hashtags.length">
   <span 
     v-for="tag in strat.hashtags" 
@@ -52,6 +53,8 @@
     #{{ tag }}
   </span>
 </div>
+=======
+>>>>>>> c4c0012bfd5f6176850d00cfc42b998809d0c9ec
 
       <footer class="card-footer">
   <span class="entry-date">{{ formattedDate }}</span>
@@ -350,6 +353,7 @@ export default {
   transform: scale(1.1);
   background: rgba(239, 68, 68, 0.1);
 }
+<<<<<<< HEAD
 .hashtags {
   display: flex;
   flex-wrap: wrap;
@@ -365,4 +369,6 @@ export default {
   border-radius: 9999px;
   border: 1px solid rgba(0, 209, 255, 0.2);
 }
+=======
+>>>>>>> c4c0012bfd5f6176850d00cfc42b998809d0c9ec
 </style>

@@ -37,6 +37,12 @@
     />
   </div>
 </nav>
+<<<<<<< HEAD
+=======
+
+
+
+>>>>>>> c4c0012bfd5f6176850d00cfc42b998809d0c9ec
         <button :disabled="!activeMap || maps.length === 0" class="btn-deploy-trigger" @click="view = 'creator'">
           DEPLOY STRATEGY
         </button>
@@ -45,6 +51,7 @@
 
     <main class="viewport">
       <header class="top-nav">
+<<<<<<< HEAD
   <div class="nav-left">
     <button class="hamburger-btn" @click="toggleSidebar">
       ☰
@@ -62,6 +69,23 @@
     </div>
   </div>
 </header>
+=======
+        <div class="nav-left">
+          <div class="version-tag">SYSTEM v3.4 // READY</div>
+        </div>
+        
+        <div class="nav-right">
+          <button @click="toggleTheme" class="btn-toggle-hud">
+            {{ theme === 'dark' ? '☀️ LIGHT HUD' : '🌙 DARK HUD' }}
+          </button>
+          <div class="status-badge">
+            <span class="s-label">DATABASE UNITS:</span>
+            <span class="s-value">{{ filteredStrats.length }}</span>
+          </div>
+        </div>
+      </header>
+
+>>>>>>> c4c0012bfd5f6176850d00cfc42b998809d0c9ec
       <section v-if="view === 'library'" class="main-view">
         <div class="content-header">
   <h2 class="active-sector-title">{{ activeMap || 'OFFLINE' }}</h2>
@@ -206,12 +230,18 @@ export default {
       strats: JSON.parse(localStorage.getItem(DATA_KEY)) || [],
       fSide: 'all',
       fSite: 'all',
+<<<<<<< HEAD
       sidebarOpen: false,
+=======
+>>>>>>> c4c0012bfd5f6176850d00cfc42b998809d0c9ec
       favoriteMode: false,
       showSearch: false,
       searchQuery: '',
       roundFilter: 'all',
+<<<<<<< HEAD
       hashtagFilter: '',
+=======
+>>>>>>> c4c0012bfd5f6176850d00cfc42b998809d0c9ec
       roundTypes: [
   { value: 'all',    label: 'ALL',    icon: '🔄' },
   { value: 'pistol', label: 'PISTOL', icon: '🔫' },
@@ -235,6 +265,7 @@ export default {
       (s.description && s.description.toLowerCase().includes(this.searchQuery.toLowerCase()));
     
     return matchMap && matchSide && matchSite && matchRound && matchSearch;
+<<<<<<< HEAD
     const matchHashtag = !this.hashtagFilter || 
   (s.hashtags && s.hashtags.some(tag => 
     tag.toLowerCase().includes(this.hashtagFilter.toLowerCase())
@@ -242,6 +273,8 @@ export default {
 
 return matchMap && matchSide && matchSite && matchRound && matchSearch && matchHashtag;
     
+=======
+>>>>>>> c4c0012bfd5f6176850d00cfc42b998809d0c9ec
   });
 
   if (this.favoriteMode) {
@@ -267,12 +300,16 @@ return matchMap && matchSide && matchSite && matchRound && matchSearch && matchH
       this.theme = this.theme === 'dark' ? 'light' : 'dark';
       localStorage.setItem(THEME_KEY, this.theme);
     },
+<<<<<<< HEAD
     
+=======
+>>>>>>> c4c0012bfd5f6176850d00cfc42b998809d0c9ec
     toggleFavorite(id) {
       const strat = this.strats.find(s => s.id === id);
       if (strat) {
     strat.favorite = !strat.favorite;
     this.persist();
+<<<<<<< HEAD
       }
     },
    toggleSidebar() {
@@ -287,6 +324,10 @@ return matchMap && matchSide && matchSite && matchRound && matchSearch && matchH
     const sidebar = document.querySelector('.sidebar');
     if (sidebar) sidebar.classList.remove('open');
   },
+=======
+  }
+},
+>>>>>>> c4c0012bfd5f6176850d00cfc42b998809d0c9ec
     changeMap(m) { this.activeMap = m; this.view = 'library'; },
     addMap() {
       const n = this.newMapInput.trim().toUpperCase();
@@ -1173,6 +1214,7 @@ body, html {
   color: white;
   box-shadow: 0 0 20px rgba(0, 209, 255, 0.3);
 }
+<<<<<<< HEAD
 /*Mobile Adapt*/
 @media (max-width: 900px) {
   .sidebar {
@@ -1278,4 +1320,6 @@ body, html {
   opacity: 1;
 }
 /*Mobile Adapt*/
+=======
+>>>>>>> c4c0012bfd5f6176850d00cfc42b998809d0c9ec
 </style>
